@@ -18,7 +18,7 @@ directions I wanted to go.
 ## Documentation
 
 The examples below should get you started, but see the [full API
-documentation](docs/uberdoc.html) for further reading.
+documentation](https://rawgit.com/enaeher/tracer/master/docs/uberdoc.html) for further reading.
 
 ## Usage
 

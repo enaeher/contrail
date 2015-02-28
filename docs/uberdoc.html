@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="FIXME: write description" name="description" /><style type="text/css">/**
+<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="An interactive tracing facility for Clojure" name="description" /><style type="text/css">/**
  * SyntaxHighlighter
  * http://alexgorbatchev.com/SyntaxHighlighter
  *
@@ -2865,28 +2865,46 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>tracer -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://example.com/FIXME">tracer</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>FIXME: write description</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">thunknyc/richelieu</td><td class="dotted"><hr /></td><td class="dep-version">0.4.0</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tracer.core">tracer.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tracer.core" name="tracer.core"><h1 class="project-name">tracer.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+</script><title>enaeher/tracer -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://github.com/enaeher/tracer">enaeher/tracer</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>An interactive tracing facility for Clojure</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">thunknyc/richelieu</td><td class="dotted"><hr /></td><td class="dep-version">0.4.0</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tracer.core">tracer.core</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tracer.core" name="tracer.core"><h1 class="project-name">tracer.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>The main namespace for Tracer.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns tracer.core
   (:require [richelieu.core :as richelieu]
-            [clojure.pprint :as pprint]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-level* 0)</pre></td></tr><tr><td class="docs"><p>FIXME -- doesn't work</p>
-</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-stream* #'*out*)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def trace-indent-per-level 2)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def indent-character \space)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- trace-indent []
-  (* trace-indent-per-level *trace-level*))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defonce traced-vars (atom '{}))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn traced? [f]
-  (some #{f} (keys @traced-vars)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn untrace [f]
-  (richelieu/unadvise-var f (@traced-vars f))
-  (println &quot;Untracing&quot; f)
-  (swap! traced-vars dissoc f))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn untrace-ns [ns]
-  (doseq [traced-fn (filter #(= (:ns (meta %)) ns) @traced-vars)]
+            [clojure.pprint :as pprint]))</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
+  will be bound to the number of traced functions currently on the
+  stack, excluding the function being reported upon.</p>
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-level*
+  0)</pre></td></tr><tr><td class="docs"><p>When using the default reporting functions, this var controls the
+  number of spaces to indent per level of nested trace
+  output. Defaults to 2.</p>
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-indent-per-level*
+  2)</pre></td></tr><tr><td class="docs"><p>When true (the default), return values of traced functions are
+  always realized immediately to ensure that trace output is printed
+  in logical order and that <code>*trace-level*</code> is always bound to the
+  logically-correct value.</p>
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *force-eager-evaluation*
+  true)</pre></td></tr><tr><td class="docs"><p>Returns the number of spaces to indent at the current <code>*trace-level*</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- trace-indent
+  []
+  (* *trace-indent-per-level* *trace-level*))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defonce ^:private traced-vars (atom '{}))</pre></td></tr><tr><td class="docs"><p>Returns true if the function bound to var <code>f</code> is traced, otherwise
+  returns false.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn traced?
+  [f]
+  (boolean (some #{f} (keys @traced-vars))))</pre></td></tr><tr><td class="docs"><p>When called with no arguments, untraces all traced functions. When
+  passed a var <code>f</code>, untraces the function bound to that var.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn untrace
+  ([]
+   (doseq [[f _] @traced-vars]
+     (untrace f)))
+  ([f]
+   (richelieu/unadvise-var f (@traced-vars f))
+   (println &quot;Untracing&quot; f)
+   (swap! traced-vars dissoc f)))</pre></td></tr><tr><td class="docs"><p>Untraces every traced var in the namespace <code>ns</code></p>
+</td><td class="codes"><pre class="brush: clojure">(defn untrace-ns
+  [ns]
+  (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) @traced-vars)]
     (untrace traced-fn)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
-  with its <code>args</code>, indented based on the current <code>*trace-level*</code>.</p>
+  with its <code>args</code>, indented based on the current <code>*trace-level*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-before
   [args]
   (pprint/cl-format true &quot;~&amp;~vt~d: (~s ~{~s~^ ~})~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* args))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
@@ -2894,21 +2912,29 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn report-after
   [retval]
   (pprint/cl-format true &quot;~&amp;~vt~d: ~s returned ~s~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* retval))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn]
-  (let [report-before-fn (or report-before-fn report-before)
-        report-after-fn (or report-after-fn report-after)
-        trace-report-fn (fn [f &amp; args]
-                          (report-before-fn args)
-                          (let [retval (binding [*trace-level* (inc *trace-level*)]
-                                         (apply f args))]
-                            (report-after-fn retval)
-                            retval))]
-    (if when-fn
-      (fn [f &amp; args]
-        (if (apply when-fn args)
-          (apply trace-report-fn f args)
-          (apply f args)))
-      trace-report-fn)))</pre></td></tr><tr><td class="docs"><p>Turns on tracing for the function bound to F, a var.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- maybe-force-eager-evaluation [thunk]
+  (if (and *force-eager-evaluation* (seq? thunk))
+    (doall thunk)
+    thunk))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- get-predicate [when-fn arg-count]
+  (apply every-pred `(~#(apply when-fn %)
+                      ~@(when arg-count (list #(= arg-count (count %)))))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn get-trace-report-fn [report-before-fn report-after-fn]
+  (fn [f &amp; args]
+    (report-before-fn args)
+    (let [retval (binding [*trace-level* (inc *trace-level*)]
+                   (maybe-force-eager-evaluation (apply f args)))]
+      (report-after-fn retval)
+      retval)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count]
+  (let [predicate (get-predicate when-fn arg-count)
+        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
+    (fn [f &amp; args]
+      (if (predicate args)
+        (apply trace-report-fn f args)
+        (apply f args)))))</pre></td></tr><tr><td class="docs"><p>Turns on tracing for the function bound to <code>f</code>, a var. If <code>f</code> is
+  already traced, trace will untrace it (warning the user), then
+  re-enable tracing using the specified options.</p>
 
 <p>  If <code>when-fn</code> is provided, the trace reporting described below will
   only occur when <code>when-fn</code> returns a truthy value when called with
@@ -2924,16 +2950,26 @@ net.brehaut.ClojureTools = (function (SH) {
   function is called, with that function's return value as its
   argument, and should print some useful output. It defaults to
   <code>trace.core/report-after</code> if not provided.</p>
+
+<p>  If <code>arg-count</code> (an integer) is provided, the trace reporting will
+  only occur when the traced function is called with that number of
+  arguments. (Note that this is not a true arity selector, since,
+  there is no way to specify that only the variadic arity of a
+  multi-arity function should be traced.)</p>
 </td><td class="codes"><pre class="brush: clojure">(defn trace
-  [f &amp; {:keys [when-fn report-before-fn report-after-fn]}]
+  [f &amp; {:keys [when-fn report-before-fn report-after-fn arg-count]
+        :or {when-fn (constantly true)
+             report-before-fn report-before
+             report-after-fn report-after}}]
   {:pre [(var? f)
          (fn? @f)]}
   (when (traced? f)
     (println f &quot;already traced, untracing first.&quot;)
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn)]
+  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count)]
     (richelieu/advise-var f advice-fn)
-    (swap! traced-vars assoc f advice-fn)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_tracer.core">tracer.core</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+    (swap! traced-vars assoc f advice-fn)
+    f))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_tracer.core">tracer.core</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack
