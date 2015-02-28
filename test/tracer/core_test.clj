@@ -9,6 +9,9 @@
 (defn foo [] "An example function used to test tracing")
 (defn bar [] "Another example function used to test nested tracing")
 
+(defn- inc-atom [a]
+  (swap! a inc))
+
 (deftest trace-state
   (testing "Trace state tracking"
     (trace #'foo)
@@ -20,7 +23,7 @@
   (testing ":report-before-fn is called"
     (let [call-count (atom 0)
           expected-call-count 5]
-      (trace #'foo :report-before-fn (fn [_] (swap! call-count inc)))
+      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
       (dotimes [i expected-call-count]
         (foo))
       (is (= expected-call-count @call-count)
@@ -62,9 +65,25 @@
             example-data [1 2 3 :a :b :c 'x 'y 'z]
             expected-return-values (map foo example-data)
             expected-call-count 3]
-        (trace #'foo :report-before-fn (fn [_] (swap! call-count inc))
+        (trace #'foo :report-before-fn (fn [_] (inc-atom call-count))
                :when-fn #(number? %))
         (is (= expected-return-values (map foo example-data))
             "The function should return normally regardless of the when-fn.")
         (is (= expected-call-count @call-count)
             "The trace report function should only fire when the when-fn returns true.")))))
+
+(deftest trace-arities
+  (testing ":arg-count handling"
+    (with-redefs [foo (fn
+                        ([] (foo 0))
+                        ([i] (inc i)))]
+      (let [call-count (atom 0)]
+        (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+        (foo)
+        (is (= 2 @call-count)
+            "By default, trace should trace all arities")
+        (reset! call-count 0)
+        (trace #'foo :arg-count 1 :report-before-fn (fn [_] (inc-atom call-count)))
+        (foo)
+        (is (= 1 @call-count)
+            "When an arg-count is specified, trace should trace only calls with that number of args")))))
