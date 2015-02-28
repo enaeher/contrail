@@ -40,6 +40,26 @@ tracer.core> (ensure-even 3)
 4
 ```
 
+### What's traced?
+
+```clojure
+tracer.core> (traced? #'every?)
+false
+
+tracer.core> (trace #'every?)
+#'clojure.core/every?
+
+tracer.core> (traced? #'every?)
+true
+
+tracer.core> (all-traced)
+(#'clojure.core/every?)
+
+tracer.core> (untrace)
+Untracing #'clojure.core/every?
+nil
+```
+
 ### Nested tracing
 
 ```clojure

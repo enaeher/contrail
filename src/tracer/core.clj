@@ -29,6 +29,11 @@
 
 (defonce ^:private traced-vars (atom '{}))
 
+(defn all-traced
+  "Returns a sequence of all currently-traced vars."
+  []
+  (map first @traced-vars))
+
 (defn traced?
   "Returns true if the function bound to var `f` is traced, otherwise
   returns false."
