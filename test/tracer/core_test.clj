@@ -6,8 +6,8 @@
                       (f)
                       (untrace-ns *ns*)))
 
-(defn foo [] "An example function used to test tracing")
-(defn bar [] "Another example function used to test nested tracing")
+(defn foo "An example function used to test tracing" [])
+(defn bar "Another example function used to test nested tracing" [])
 
 (defn- inc-atom [a]
   (swap! a inc))
