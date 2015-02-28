@@ -66,24 +66,27 @@
     (doall thunk)
     thunk))
 
+(defn- get-predicate [when-fn arg-count]
+  (let [predicates `(~@(when when-fn (list #(apply when-fn %)))
+                     ~@(when arg-count (list #(= arg-count (count %)))))]
+    (apply every-pred (or (seq predicates)
+                          [(constantly true)]))))
+
+(defn get-trace-report-fn [report-before-fn report-after-fn]
+  (fn [f & args]
+    (report-before-fn args)
+    (let [retval (binding [*trace-level* (inc *trace-level*)]
+                   (maybe-force-eager-evaluation (apply f args)))]
+      (report-after-fn retval)
+      retval)))
+
 (defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count]
   (let [report-before-fn (or report-before-fn report-before)
         report-after-fn (or report-after-fn report-after)
-        when-fn (if when-fn
-                  #(apply when-fn %)
-                  (constantly true))
-        arg-count-fn (if arg-count
-                       #(= arg-count (count %))
-                       (constantly true))
-        pred-fn (every-pred when-fn arg-count-fn)
-        trace-report-fn (fn [f & args]
-                          (report-before-fn args)
-                          (let [retval (binding [*trace-level* (inc *trace-level*)]
-                                         (maybe-force-eager-evaluation (apply f args)))]
-                            (report-after-fn retval)
-                            retval))]
+        predicate (get-predicate when-fn arg-count)
+        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
     (fn [f & args]
-      (if (pred-fn args)
+      (if (predicate args)
         (apply trace-report-fn f args)
         (apply f args)))))
 
