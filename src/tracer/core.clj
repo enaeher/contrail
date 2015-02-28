@@ -1,4 +1,5 @@
 (ns tracer.core
+  "The main namespace for Tracer."
   (:require [richelieu.core :as richelieu]
             [clojure.pprint :as pprint]))
 
@@ -21,7 +22,9 @@
   logically-correct value."
   true)
 
-(defn- trace-indent []
+(defn- trace-indent
+  "Returns the number of spaces to indent at the current `*trace-level*`."
+  []
   (* *trace-indent-per-level* *trace-level*))
 
 (defonce ^:private traced-vars (atom '{}))
@@ -88,8 +91,8 @@
 
 (defn trace
   "Turns on tracing for the function bound to `f`, a var. If `f` is
-  already traced, untrace it, then re-enable tracing using the
-  specified options.
+  already traced, trace will untrace it (warning the user), then
+  re-enable tracing using the specified options.
 
   If `when-fn` is provided, the trace reporting described below will
   only occur when `when-fn` returns a truthy value when called with
@@ -122,4 +125,5 @@
     (untrace f))
   (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count)]
     (richelieu/advise-var f advice-fn)
-    (swap! traced-vars assoc f advice-fn)))
+    (swap! traced-vars assoc f advice-fn)
+    f))
