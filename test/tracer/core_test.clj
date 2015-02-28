@@ -2,9 +2,7 @@
   (:require [clojure.test :refer :all]
             [tracer.core :refer :all]))
 
-(use-fixtures :once (fn [f]
-                      (f)
-                      (untrace-ns *ns*)))
+(use-fixtures :each (fn [f] (f) (untrace-ns *ns*)))
 
 (defn foo "An example function used to test tracing" [])
 (defn bar "Another example function used to test nested tracing" [])

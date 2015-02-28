@@ -46,7 +46,7 @@
 (defn untrace-ns
   "Untraces every traced var in the namespace `ns`"
   [ns]
-  (doseq [traced-fn (filter #(= (:ns (meta %)) ns) @traced-vars)]
+  (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) @traced-vars)]
     (untrace traced-fn)))
 
 (defn report-before
