@@ -43,8 +43,9 @@
    (println "Untracing" f)
    (swap! traced-vars dissoc f)))
 
-(defn untrace-ns [ns]
+(defn untrace-ns
   "Untraces every traced var in the namespace `ns`"
+  [ns]
   (doseq [traced-fn (filter #(= (:ns (meta %)) ns) @traced-vars)]
     (untrace traced-fn)))
 
@@ -65,24 +66,31 @@
     (doall thunk)
     thunk))
 
-(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn]
+(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count]
   (let [report-before-fn (or report-before-fn report-before)
         report-after-fn (or report-after-fn report-after)
+        when-fn (if when-fn
+                  #(apply when-fn %)
+                  (constantly true))
+        arg-count-fn (if arg-count
+                       #(= arg-count (count %))
+                       (constantly true))
+        pred-fn (every-pred when-fn arg-count-fn)
         trace-report-fn (fn [f & args]
                           (report-before-fn args)
                           (let [retval (binding [*trace-level* (inc *trace-level*)]
                                          (maybe-force-eager-evaluation (apply f args)))]
                             (report-after-fn retval)
                             retval))]
-    (if when-fn
-      (fn [f & args]
-        (if (apply when-fn args)
-          (apply trace-report-fn f args)
-          (apply f args)))
-      trace-report-fn)))
+    (fn [f & args]
+      (if (pred-fn args)
+        (apply trace-report-fn f args)
+        (apply f args)))))
 
 (defn trace
-  "Turns on tracing for the function bound to F, a var.
+  "Turns on tracing for the function bound to `f`, a var. If `f` is
+  already traced, untrace it, then re-enable tracing using the
+  specified options.
 
   If `when-fn` is provided, the trace reporting described below will
   only occur when `when-fn` returns a truthy value when called with
@@ -97,13 +105,19 @@
   If `report-after-fn` is provided, it will be called after the traced
   function is called, with that function's return value as its
   argument, and should print some useful output. It defaults to
-  `trace.core/report-after` if not provided."
-  [f & {:keys [when-fn report-before-fn report-after-fn]}]
+  `trace.core/report-after` if not provided.
+
+  If `arg-count` (an integer) is provided, the trace reporting will
+  only occur when the traced function is called with that number of
+  arguments. (Note that this is not a true arity selector, since,
+  there is no way to specify that only the variadic arity of a
+  multi-arity function should be traced.)"
+  [f & {:keys [when-fn report-before-fn report-after-fn arg-count]}]
   {:pre [(var? f)
          (fn? @f)]}
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn)]
+  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count)]
     (richelieu/advise-var f advice-fn)
     (swap! traced-vars assoc f advice-fn)))

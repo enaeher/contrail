@@ -37,6 +37,13 @@ documentation](docs/uberdoc.html) for further reading.
   In some cases, you may prefer to disable this behavior, which you
   can do by setting `*force-eager-evaluation*` to false.
 
+- `:arg-count` does not work as a true arity selector, because it
+  doesn't allow you to trace only the variadic arity of a multi-arity
+  function. To do that, you'll need to do something like:
+
+  ```clojure
+  :when-fn (fn [& args] (> (count args) greatest-definite-arity))
+  ```
 
 ## License
 
