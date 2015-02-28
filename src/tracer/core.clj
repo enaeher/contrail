@@ -67,10 +67,8 @@
     thunk))
 
 (defn- get-predicate [when-fn arg-count]
-  (let [predicates `(~@(when when-fn (list #(apply when-fn %)))
-                     ~@(when arg-count (list #(= arg-count (count %)))))]
-    (apply every-pred (or (seq predicates)
-                          [(constantly true)]))))
+  (apply every-pred `(~#(apply when-fn %)
+                      ~@(when arg-count (list #(= arg-count (count %)))))))
 
 (defn get-trace-report-fn [report-before-fn report-after-fn]
   (fn [f & args]
@@ -81,9 +79,7 @@
       retval)))
 
 (defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count]
-  (let [report-before-fn (or report-before-fn report-before)
-        report-after-fn (or report-after-fn report-after)
-        predicate (get-predicate when-fn arg-count)
+  (let [predicate (get-predicate when-fn arg-count)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
     (fn [f & args]
       (if (predicate args)
@@ -115,7 +111,10 @@
   arguments. (Note that this is not a true arity selector, since,
   there is no way to specify that only the variadic arity of a
   multi-arity function should be traced.)"
-  [f & {:keys [when-fn report-before-fn report-after-fn arg-count]}]
+  [f & {:keys [when-fn report-before-fn report-after-fn arg-count]
+        :or {when-fn (constantly true)
+             report-before-fn report-before
+             report-after-fn report-after}}]
   {:pre [(var? f)
          (fn? @f)]}
   (when (traced? f)
