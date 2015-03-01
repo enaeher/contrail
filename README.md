@@ -157,7 +157,7 @@ tracer.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
   `*trace-level*` is bound to the logically-correct value.
 
   In some cases, you may prefer to disable this behavior, which you
-  can do by setting `*force-eager-evaluation*` to false.
+  can do by binding `*force-eager-evaluation*` to false.
 
 - Inline functions and Java methods cannot be traced.
 
