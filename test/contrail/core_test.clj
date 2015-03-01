@@ -62,9 +62,9 @@
       (let [call-count (atom 0)
             example-data [1 2 3 :a :b :c 'x 'y 'z]
             expected-return-values (map foo example-data)
-            expected-call-count 3]
+            expected-call-count (count (filter number? example-data))]
         (trace #'foo :report-before-fn (fn [_] (inc-atom call-count))
-               :when-fn #(number? %))
+               :when-fn number?)
         (is (= expected-return-values (map foo example-data))
             "The function should return normally regardless of the when-fn.")
         (is (= expected-call-count @call-count)

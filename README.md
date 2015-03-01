@@ -88,7 +88,7 @@ contrail.core> (ensure-all-even [1 2 3])
 ### Conditional tracing
 
 ```clojure
-contrail.core> (trace #'ensure-even :when-fn #(odd? %))
+contrail.core> (trace #'ensure-even :when-fn odd?))
 #'contrail.core/ensure-even already traced, untracing first.
 Untracing #'contrail.core/ensure-even
 #'contrail.core/ensure-even
