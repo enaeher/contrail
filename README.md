@@ -148,7 +148,7 @@ tracer.core> (bar)
 nil
 ```
 
-N.B.: numerous and severe caveats apply, see [below](#Caveats and gotchas).
+N.B.: numerous and severe caveats apply, see [below](#caveats-and-gotchas).
 
 ### Overriding the default trace reporters
 
