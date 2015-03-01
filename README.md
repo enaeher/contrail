@@ -125,6 +125,31 @@ tracer.core> (minimum 1 2 3 4 5)
 1
 ```
 
+### Tracing one function only within another function
+
+```clojure
+tracer.core> (defn foo [])
+#'tracer.core/foo
+
+tracer.core> (defn bar [] (foo))
+#'tracer.core/bar
+
+tracer.core> (trace #'foo :within #'bar)
+#'tracer.core/foo already traced, untracing first.
+Untracing #'tracer.core/foo
+#'tracer.core/foo
+
+tracer.core> (foo)
+nil
+
+tracer.core> (bar)
+ 0: (#'tracer.core/foo )
+ 0: #'tracer.core/foo returned nil
+nil
+```
+
+N.B.: numerous and severe caveats apply, see [below](#Caveats and gotchas).
+
 ### Overriding the default trace reporters
 
 ```clojure
@@ -172,6 +197,25 @@ tracer.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
   ```clojure
   :when-fn (fn [& args] (> (count args) greatest-definite-arity))
   ```
+
+- `:within` operates by introspecting the current thread's stack,
+  which means that not only won't it work across newly-created
+  threads, but it often won't work in contexts where the `:within`
+  function returns a lazy sequence. Consider the following:
+
+  ```clojure
+  (defn x [])
+
+  (defn y []
+    (map x [1 2 3]))
+  ```
+
+  Since `map` (and thus `y`) returns a lazy sequence, the sequence
+  won't be realized (and `x` won't be called) until after `y` has
+  returned, which means that if you look at the call stack from within
+  `x`, `y` will be long gone, so `(trace #'x :within #'y)` will never
+  print any output. Yes, this is a very frustrating limitation, but
+  I'm not sure that it's possible to get around it in Clojure.
 
 ## Todo
 

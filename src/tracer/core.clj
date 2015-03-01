@@ -1,7 +1,8 @@
 (ns tracer.core
   "The main namespace for Tracer."
   (:require [richelieu.core :as richelieu]
-            [clojure.pprint :as pprint]))
+            [clojure.pprint :as pprint]
+            [tracer.within :as within]))
 
 (def ^:dynamic *trace-level*
   "Within a `report-before-fn` or `report-after-fn`, `*trace-level*`
@@ -74,8 +75,9 @@
     (doall thunk)
     thunk))
 
-(defn- get-predicate [when-fn arg-count]
+(defn- get-predicate [when-fn arg-count within]
   (apply every-pred `(~#(apply when-fn %)
+                      ~@(when within (list (fn [_] (within/within? @within))))
                       ~@(when arg-count (list #(= arg-count (count %)))))))
 
 (defn get-trace-report-fn [report-before-fn report-after-fn]
@@ -86,8 +88,8 @@
       (report-after-fn retval)
       retval)))
 
-(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count]
-  (let [predicate (get-predicate when-fn arg-count)
+(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count within]
+  (let [predicate (get-predicate when-fn arg-count within)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
     (fn [f & args]
       (if (predicate args)
@@ -104,6 +106,16 @@
   the same args as the traced functions. If `when-fn` is not provided,
   every call to the traced function will be reported.
 
+  If `arg-count` (an integer) is provided, the trace reporting will
+  only occur when the traced function is called with that number of
+  arguments. (Note that this is not a true arity selector, since,
+  there is no way to specify that only the variadic arity of a
+  multi-arity function should be traced.)
+
+  If `within` (a var bound to a function) is provided, the trace
+  reporting will only occur when the traced function is called while
+  the specified `within` function is on the stack.
+
   If `report-before-fn` is provided, it will be called before the
   traced function is called, with the same arguments as the traced
   function, and should print some useful output. It defaults to
@@ -112,23 +124,21 @@
   If `report-after-fn` is provided, it will be called after the traced
   function is called, with that function's return value as its
   argument, and should print some useful output. It defaults to
-  `trace.core/report-after` if not provided.
-
-  If `arg-count` (an integer) is provided, the trace reporting will
-  only occur when the traced function is called with that number of
-  arguments. (Note that this is not a true arity selector, since,
-  there is no way to specify that only the variadic arity of a
-  multi-arity function should be traced.)"
-  [f & {:keys [when-fn report-before-fn report-after-fn arg-count]
+  `trace.core/report-after` if not provided."
+  [f & {:keys [when-fn report-before-fn report-after-fn arg-count within]
         :or {when-fn (constantly true)
              report-before-fn report-before
              report-after-fn report-after}}]
   {:pre [(var? f)
-         (fn? @f)]}
+         (fn? @f)
+         (if within
+           (and (var? within)
+                (fn? @within))
+           true)]}
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count)]
+  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count within)]
     (richelieu/advise-var f advice-fn)
     (swap! traced-vars assoc f advice-fn)
     f))
