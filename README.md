@@ -1,6 +1,8 @@
+[![Build Status](https://travis-ci.org/enaeher/contrail.svg?branch=master)](https://travis-ci.org/enaeher/contrail)
+
 # contrail
 
-Contrail is a library for interactively instrumenting your code in the
+Contrail is a library for interactively tracing your code in the
 REPL during development. It is heavily inspired by the excellent
 tracing facilities provided by
 [SBCL](http://www.sbcl.org/manual/#Function-Tracing).
@@ -129,21 +131,23 @@ contrail.core> (minimum 1 2 3 4 5)
 ### Tracing one function only within another function
 
 ```clojure
+
 contrail.core> (defn foo [])
 #'contrail.core/foo
 
 contrail.core> (defn bar [] (foo))
 #'contrail.core/bar
 
-contrail.core> (trace #'foo :within #'bar)
-#'contrail.core/foo already traced, untracing first.
-Untracing #'contrail.core/foo
+contrail.core> (defn baz [] (bar))
+#'contrail.core/baz
+
+contrail.core> (trace #'foo :within #'baz)
 #'contrail.core/foo
 
 contrail.core> (foo)
 nil
 
-contrail.core> (bar)
+contrail.core> (baz)
  0: (#'contrail.core/foo )
  0: #'contrail.core/foo returned nil
 nil
