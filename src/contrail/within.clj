@@ -1,4 +1,4 @@
-(ns tracer.within)
+(ns contrail.within)
 
 (defn- match? [potentially-enclosing-fn stack-trace-element]
   (= (.getName (class potentially-enclosing-fn))

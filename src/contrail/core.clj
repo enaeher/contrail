@@ -1,8 +1,8 @@
-(ns tracer.core
-  "The main namespace for Tracer."
+(ns contrail.core
+  "The main namespace for Contrail."
   (:require [richelieu.core :as richelieu]
             [clojure.pprint :as pprint]
-            [tracer.within :as within]))
+            [contrail.within :as within]))
 
 (def ^:dynamic *trace-level*
   "Within a `report-before-fn` or `report-after-fn`, `*trace-level*`
@@ -119,7 +119,7 @@
   If `report-before-fn` is provided, it will be called before the
   traced function is called, with the same arguments as the traced
   function, and should print some useful output. It defaults to
-  `tracer.core/report-before` if not provided.
+  `contrail.core/report-before` if not provided.
 
   If `report-after-fn` is provided, it will be called after the traced
   function is called, with that function's return value as its

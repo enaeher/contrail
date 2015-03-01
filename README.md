@@ -1,15 +1,16 @@
-# tracer
+# contrail
 
-Tracer is a library for interactively instrumenting your code in the
+Contrail is a library for interactively instrumenting your code in the
 REPL during development. It is heavily inspired by the excellent
-tracing facilities provided by [SBCL](http://www.sbcl.org/manual/#Function-Tracing).
+tracing facilities provided by
+[SBCL](http://www.sbcl.org/manual/#Function-Tracing).
 
 ## Why?
 
 Clojure ships with
 [clojure.tools.trace](https://github.com/clojure/tools.trace), which
 has some nice features like Cider integration, so why did I write
-Tracer?
+Contrail?
 
 I found clojure.tools.trace's functionality too limited for my needs,
 and its architecture did not lend itself to easy extension in the
@@ -18,44 +19,44 @@ directions I wanted to go.
 ## Documentation
 
 The examples below should get you started, but see the [full API
-documentation](https://rawgit.com/enaeher/tracer/master/docs/uberdoc.html) for further reading.
+documentation](https://rawgit.com/enaeher/contrail/master/docs/uberdoc.html) for further reading.
 
 ## Usage
 
 ### The simple case
 
 ```clojure
-tracer.core> (defn ensure-even [i]
-               (if (odd? i)
-                 (inc i)
-                 i))
-#'tracer.core/ensure-even
+contrail.core> (defn ensure-even [i]
+                 (if (odd? i)
+                   (inc i)
+                   i))
+#'contrail.core/ensure-even
 
-tracer.core> (trace #'ensure-even)
-#'tracer.core/ensure-even
+contrail.core> (trace #'ensure-even)
+#'contrail.core/ensure-even
 
-tracer.core> (ensure-even 3)
- 0: (#'tracer.core/ensure-even 3)
- 0: #'tracer.core/ensure-even returned 4
+contrail.core> (ensure-even 3)
+ 0: (#'contrail.core/ensure-even 3)
+ 0: #'contrail.core/ensure-even returned 4
 4
 ```
 
 ### What's traced?
 
 ```clojure
-tracer.core> (traced? #'every?)
+contrail.core> (traced? #'every?)
 false
 
-tracer.core> (trace #'every?)
+contrail.core> (trace #'every?)
 #'clojure.core/every?
 
-tracer.core> (traced? #'every?)
+contrail.core> (traced? #'every?)
 true
 
-tracer.core> (all-traced)
+contrail.core> (all-traced)
 (#'clojure.core/every?)
 
-tracer.core> (untrace)
+contrail.core> (untrace)
 Untracing #'clojure.core/every?
 nil
 ```
@@ -63,88 +64,88 @@ nil
 ### Nested tracing
 
 ```clojure
-tracer.core> (defn ensure-all-even [numbers]
-               (map ensure-even numbers))
-#'tracer.core/ensure-all-even
+contrail.core> (defn ensure-all-even [numbers]
+                 (map ensure-even numbers))
+#'contrail.core/ensure-all-even
 
-tracer.core> (trace #'ensure-all-even)
-#'tracer.core/ensure-all-even
+contrail.core> (trace #'ensure-all-even)
+#'contrail.core/ensure-all-even
 
-tracer.core> (ensure-all-even [1 2 3])
- 0: (#'tracer.core/ensure-all-even [1 2 3])
-  1: (#'tracer.core/ensure-even 1)
-  1: #'tracer.core/ensure-even returned 2
-  1: (#'tracer.core/ensure-even 2)
-  1: #'tracer.core/ensure-even returned 2
-  1: (#'tracer.core/ensure-even 3)
-  1: #'tracer.core/ensure-even returned 4
- 0: #'tracer.core/ensure-all-even returned (2 2 4)
+contrail.core> (ensure-all-even [1 2 3])
+ 0: (#'contrail.core/ensure-all-even [1 2 3])
+  1: (#'contrail.core/ensure-even 1)
+  1: #'contrail.core/ensure-even returned 2
+  1: (#'contrail.core/ensure-even 2)
+  1: #'contrail.core/ensure-even returned 2
+  1: (#'contrail.core/ensure-even 3)
+  1: #'contrail.core/ensure-even returned 4
+ 0: #'contrail.core/ensure-all-even returned (2 2 4)
 (2 2 4)
 ```
 
 ### Conditional tracing
 
 ```clojure
-tracer.core> (trace #'ensure-even :when-fn #(odd? %))
-#'tracer.core/ensure-even already traced, untracing first.
-Untracing #'tracer.core/ensure-even
-#'tracer.core/ensure-even
+contrail.core> (trace #'ensure-even :when-fn #(odd? %))
+#'contrail.core/ensure-even already traced, untracing first.
+Untracing #'contrail.core/ensure-even
+#'contrail.core/ensure-even
 
-tracer.core> (ensure-all-even [1 2 3])
- 0: (#'tracer.core/ensure-all-even [1 2 3])
-  1: (#'tracer.core/ensure-even 1)
-  1: #'tracer.core/ensure-even returned 2
-  1: (#'tracer.core/ensure-even 3)
-  1: #'tracer.core/ensure-even returned 4
- 0: #'tracer.core/ensure-all-even returned (2 2 4)
+contrail.core> (ensure-all-even [1 2 3])
+ 0: (#'contrail.core/ensure-all-even [1 2 3])
+  1: (#'contrail.core/ensure-even 1)
+  1: #'contrail.core/ensure-even returned 2
+  1: (#'contrail.core/ensure-even 3)
+  1: #'contrail.core/ensure-even returned 4
+ 0: #'contrail.core/ensure-all-even returned (2 2 4)
 (2 2 4)
 ```
 
 ### Tracing a specific arity
 
 ```clojure
-tracer.core> (defn minimum
-               ([] Double/POSITIVE_INFINITY)
-               ([n] n)
-               ([a b] (if (< a b) a b))
-               ([a b & r] (reduce minimum (conj r a b))))
-#'tracer.core/minimum
+contrail.core> (defn minimum
+                 ([] Double/POSITIVE_INFINITY)
+                 ([n] n)
+                 ([a b] (if (< a b) a b))
+                 ([a b & r] (reduce minimum (conj r a b))))
+#'contrail.core/minimum
 
-tracer.core> (trace #'minimum :arg-count 2)
-#'tracer.core/minimum
+contrail.core> (trace #'minimum :arg-count 2)
+#'contrail.core/minimum
 
-tracer.core> (minimum 1 2 3 4 5)
- 0: (#'tracer.core/minimum 2 1)
- 0: #'tracer.core/minimum returned 1
- 0: (#'tracer.core/minimum 1 3)
- 0: #'tracer.core/minimum returned 1
- 0: (#'tracer.core/minimum 1 4)
- 0: #'tracer.core/minimum returned 1
- 0: (#'tracer.core/minimum 1 5)
- 0: #'tracer.core/minimum returned 1
+contrail.core> (minimum 1 2 3 4 5)
+ 0: (#'contrail.core/minimum 2 1)
+ 0: #'contrail.core/minimum returned 1
+ 0: (#'contrail.core/minimum 1 3)
+ 0: #'contrail.core/minimum returned 1
+ 0: (#'contrail.core/minimum 1 4)
+ 0: #'contrail.core/minimum returned 1
+ 0: (#'contrail.core/minimum 1 5)
+ 0: #'contrail.core/minimum returned 1
 1
 ```
 
 ### Tracing one function only within another function
 
 ```clojure
-tracer.core> (defn foo [])
-#'tracer.core/foo
+contrail.core> (defn foo [])
+#'contrail.core/foo
 
-tracer.core> (defn bar [] (foo))
-#'tracer.core/bar
+contrail.core> (defn bar [] (foo))
+#'contrail.core/bar
 
-tracer.core> (trace #'foo :within #'bar)
-#'tracer.core/foo already traced, untracing first.
-Untracing #'tracer.core/foo
-#'tracer.core/foo
+contrail.core> (trace #'foo :within #'bar)
+#'contrail.core/foo already traced, untracing first.
+Untracing #'contrail.core/foo
+#'contrail.core/foo
 
-tracer.core> (foo)
+contrail.core> (foo)
 nil
 
-tracer.core> (bar)
- 0: (#'tracer.core/foo )
- 0: #'tracer.core/foo returned nil
+contrail.core> (bar)
+ 0: (#'contrail.core/foo )
+ 0: #'contrail.core/foo returned nil
 nil
 ```
 
@@ -153,23 +154,23 @@ N.B.: numerous and severe caveats apply, see [below](#caveats-and-gotchas).
 ### Overriding the default trace reporters
 
 ```clojure
-tracer.core> (defn many-splendored-identity [& args]
-               (map identity args))
-#'tracer.core/many-splendored-identity
+contrail.core> (defn many-splendored-identity [& args]
+                 (map identity args))
+#'contrail.core/many-splendored-identity
 
-tracer.core> (trace #'many-splendored-identity
-                    :report-before-fn (fn [args]
-                                        (pprint/cl-format true "~&~vt~d: (~s ~{~s~^ ~})~%"
-                                                          (trace-indent)
-                                                          *trace-level*
-                                                          richelieu/*current-advised*
-                                                          ;; print argument types rather than values	
-                                                          (map type args))))
-#'tracer.core/many-splendored-identity
+contrail.core> (trace #'many-splendored-identity
+                      :report-before-fn (fn [args]
+                                          (pprint/cl-format true "~&~vt~d: (~s ~{~s~^ ~})~%"
+                                                            (trace-indent)
+                                                            *trace-level*
+                                                            richelieu/*current-advised*
+                                                            ;; print argument types rather than values	
+                                                            (map type args))))
+#'contrail.core/many-splendored-identity
 
-tracer.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
- 0: (#'tracer.core/many-splendored-identity clojure.lang.PersistentArrayMap clojure.lang.Symbol clojure.lang.PersistentVector java.lang.Long clojure.lang.PersistentHashSet)
- 0: #'tracer.core/many-splendored-identity returned ({:c d, :a b} foo [42] 42 #{})
+contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
+ 0: (#'contrail.core/many-splendored-identity clojure.lang.PersistentArrayMap clojure.lang.Symbol clojure.lang.PersistentVector java.lang.Long clojure.lang.PersistentHashSet)
+ 0: #'contrail.core/many-splendored-identity returned ({:c d, :a b} foo [42] 42 #{})
 ({:c d, :a b} foo [42] 42 #{})
 ```
 

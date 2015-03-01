@@ -1,7 +1,7 @@
-(ns tracer.within-test
-  (:require [tracer.within :refer :all]
+(ns contrail.within-test
+  (:require [contrail.within :refer :all]
             [clojure.test :refer :all]
-            [tracer.within-test-namespace :as test-ns]))
+            [contrail.within-test-namespace :as test-ns]))
 
 (defn test-fn-1 [f]
   (f))

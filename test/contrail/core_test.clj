@@ -1,6 +1,6 @@
-(ns tracer.core-test
+(ns contrail.core-test
   (:require [clojure.test :refer :all]
-            [tracer.core :refer :all]))
+            [contrail.core :refer :all]))
 
 (use-fixtures :each (fn [f] (untrace) (f)))
 
