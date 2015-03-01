@@ -5,7 +5,8 @@
      (.getClassName stack-trace-element)))
 
 (defn within?
-  "Returns true if potentially-enclosing-var "
+  "Returns true if potentially-enclosing-fn is currently on the
+  stack."
   [potentially-enclosing-fn]
   (some (partial match? potentially-enclosing-fn)
         (.. Thread currentThread getStackTrace)))
