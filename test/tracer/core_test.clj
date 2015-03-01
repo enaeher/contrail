@@ -85,3 +85,15 @@
         (foo)
         (is (= 1 @call-count)
             "When an arg-count is specified, trace should trace only calls with that number of args")))))
+
+(deftest trace-within
+  (testing ":within handling"
+    (with-redefs [foo (fn [] (bar))]
+      (let [call-count (atom 0)]
+        (trace #'bar :within #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+        (bar)
+        (is (zero? @call-count)
+            "The trace report function should not fire when a :within function is provided but is not on the stack.")
+        (foo)
+        (is (= 1 @call-count)
+            "The trace report function should fire when a :within function is provided and is on the stack.")))))
