@@ -97,3 +97,15 @@
         (foo)
         (is (= 1 @call-count)
             "The trace report function should fire when a :within function is provided and is on the stack.")))))
+
+(deftest trace-call-count
+  (testing ":call-count handling"
+    (let [call-count (atom 0)
+          expected-call-count 5]
+      (trace #'foo :call-count expected-call-count :report-before-fn (fn [_] (inc-atom call-count)))
+      (dotimes [i 10]
+        (foo))
+      (is (= expected-call-count @call-count)
+          "The trace report function should fire no more than the number of times specified.")
+      (is (not (traced? #'foo))
+          "Once the traced function has been called the specified number of times, it should be untraced."))))
