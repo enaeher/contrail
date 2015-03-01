@@ -221,8 +221,6 @@ tracer.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 - Allow redirection of trace output (without having to rebind `*out*`)
 
-- Add `:within` option
-
 - Add `:count` option, to automatically stop tracing after a certain
   number of calls
 
