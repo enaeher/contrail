@@ -5,7 +5,7 @@
             [contrail.within :as within]))
 
 (def ^:dynamic *trace-out*
-  "Trace output will be sent to this writer, which defaults to *out*."
+  "Trace output will be sent to this writer, which defaults to `*out*`."
   *out*)
 
 (def ^:dynamic *trace-level*

@@ -2870,7 +2870,9 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.core
   (:require [richelieu.core :as richelieu]
             [clojure.pprint :as pprint]
-            [contrail.within :as within]))</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
+            [contrail.within :as within]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, which defaults to <code>*out*</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-out*
+  *out*)</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
   will be bound to the number of traced functions currently on the
   stack, excluding the function being reported upon.</p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-level*
@@ -2911,11 +2913,11 @@ net.brehaut.ClojureTools = (function (SH) {
   with its <code>args</code>, indented based on the current <code>*trace-level*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-before
   [args]
-  (pprint/cl-format true &quot;~&amp;~vt~d: (~s ~{~s~^ ~})~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* args))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
+  (pprint/cl-format *trace-out* &quot;~&amp;~vt~d: (~s~@[ ~{~s~^ ~}~])~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* args))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
   with its <code>retval</code>, indented based on the current <code>*trace-level*</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-after
   [retval]
-  (pprint/cl-format true &quot;~&amp;~vt~d: ~s returned ~s~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* retval))</pre></td></tr><tr><td class="docs">
+  (pprint/cl-format *trace-out* &quot;~&amp;~vt~d: ~s returned ~s~%&quot; (trace-indent) *trace-level* richelieu/*current-advised* retval))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn- maybe-force-eager-evaluation [thunk]
   (if (and *force-eager-evaluation* (seq? thunk))
     (doall thunk)
