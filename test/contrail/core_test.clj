@@ -139,3 +139,13 @@
             "The traced function didn't return the same value as the untraced function.")
         (is (= expected-call-count @call-count)
             "When a :when-fn is specified, only calls which match the :when-fn should count toward the limit.")))))
+
+(deftest trace-out
+  (testing "*trace-out*"
+    (binding [*trace-out* (new java.io.StringWriter)]
+      (is (empty? (with-out-str
+                    (trace #'foo)
+                    (foo)))
+          "Trace reporting shouldn't produce anything on *out* when *trace-out* is bound to something else.")
+      (is (seq (str *trace-out*))
+          "Trace reporting should produce output on *trace-out*"))))
