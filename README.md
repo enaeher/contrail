@@ -155,6 +155,23 @@ nil
 
 N.B.: numerous and severe caveats apply, see [below](#caveats-and-gotchas).
 
+### Tracing a limited number of calls
+
+```clojure
+contrail.core> (trace #'odd? :limit 3)
+#'clojure.core/odd?
+
+contrail.core> (map odd? (range 1 10))
+ 0: (#'clojure.core/odd? 1)
+ 0: #'clojure.core/odd? returned true
+ 0: (#'clojure.core/odd? 2)
+ 0: #'clojure.core/odd? returned false
+ 0: (#'clojure.core/odd? 3)
+ 0: #'clojure.core/odd? returned true
+Untracing #'clojure.core/odd?
+(true false true false true false true false true)
+```
+
 ### Overriding the default trace reporters
 
 ```clojure
@@ -225,9 +242,6 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 ## Todo
 
 - Allow redirection of trace output (without having to rebind `*out*`)
-
-- Add `:count` option, to automatically stop tracing after a certain
-  number of calls
 
 - (Maybe) add the ability to serialize (and later re-apply) the current trace
   state

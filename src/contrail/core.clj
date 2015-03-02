@@ -88,9 +88,33 @@
       (report-after-fn retval)
       retval)))
 
-(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count within]
+(defn- wrap-with-counter [f limit]
+  (let [remaining-count (atom limit)]
+    (add-watch remaining-count (gensym)
+               (fn [key _ _ new-value]
+                 (when (zero? new-value)
+                   (untrace richelieu/*current-advised*)
+                   (remove-watch remaining-count key))))
+    (fn [traced-f & args]
+      ;; Necessary to avoid a race condition where we've called
+      ;; untrace, which alters the var root to remove the trace, but
+      ;; an unrealized sequence still maintains a reference to the
+      ;; traced function
+      (if (zero? @remaining-count)
+        (apply traced-f args)
+        (let [retval (apply f traced-f args)]
+          (swap! remaining-count dec)
+          retval)))))
+
+(defn- maybe-wrap-with-counter [f limit]
+  (if limit
+    (wrap-with-counter f limit)
+    f))
+
+(defn- get-wrapped-fn [f when-fn within limit report-before-fn report-after-fn arg-count]
   (let [predicate (get-predicate when-fn arg-count within)
-        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
+        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
+        trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]
     (fn [f & args]
       (if (predicate args)
         (apply trace-report-fn f args)
@@ -106,15 +130,22 @@
   the same args as the traced functions. If `when-fn` is not provided,
   every call to the traced function will be reported.
 
+  If `within` (a var bound to a function) is provided, the trace
+  reporting will only occur when the traced function is called while
+  the specified `within` function is on the stack.
+
   If `arg-count` (an integer) is provided, the trace reporting will
   only occur when the traced function is called with that number of
   arguments. (Note that this is not a true arity selector, since,
   there is no way to specify that only the variadic arity of a
   multi-arity function should be traced.)
 
-  If `within` (a var bound to a function) is provided, the trace
-  reporting will only occur when the traced function is called while
-  the specified `within` function is on the stack.
+  If `limit` (an integer) is provided, the trace reporting will only
+  occur `limit` number of times, after which `untrace` will be called
+  on the traced var. (If `limit` is specified in combination with
+  `when-fn`, `within`, or `arg-count`, only calls to the traced
+  function which actually meet those conditions and result in trace
+  reporting will count toward the limit.)
 
   If `report-before-fn` is provided, it will be called before the
   traced function is called, with the same arguments as the traced
@@ -125,7 +156,7 @@
   function is called, with that function's return value as its
   argument, and should print some useful output. It defaults to
   `trace.core/report-after` if not provided."
-  [f & {:keys [when-fn report-before-fn report-after-fn arg-count within]
+  [f & {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
              report-before-fn report-before
              report-after-fn report-after}}]
@@ -138,7 +169,7 @@
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count within)]
+  (let [advice-fn (get-wrapped-fn f when-fn within limit report-before-fn report-after-fn arg-count)]
     (richelieu/advise-var f advice-fn)
     (swap! traced-vars assoc f advice-fn)
     f))
