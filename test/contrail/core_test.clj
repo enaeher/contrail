@@ -53,7 +53,7 @@
       (trace #'foo)
       (trace #'bar :report-before-fn
              (fn [_] (is (= 1 *trace-level*)
-                         "delayed execution of inner traced functions shouldn't be allowed to mess up *trace-level*")))
+                         "Delayed execution of inner traced functions shouldn't be allowed to mess up *trace-level*")))
       (foo [1 2 3 4]))))
 
 (deftest trace-conditionally
@@ -98,14 +98,44 @@
         (is (= 1 @call-count)
             "The trace report function should fire when a :within function is provided and is on the stack.")))))
 
-(deftest trace-call-count
-  (testing ":call-count handling"
+(deftest trace-limit
+  (testing ":limit handling"
     (let [call-count (atom 0)
           expected-call-count 5]
-      (trace #'foo :call-count expected-call-count :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :limit expected-call-count :report-before-fn (fn [_] (inc-atom call-count)))
       (dotimes [i 10]
         (foo))
       (is (= expected-call-count @call-count)
           "The trace report function should fire no more than the number of times specified.")
       (is (not (traced? #'foo))
           "Once the traced function has been called the specified number of times, it should be untraced."))))
+
+(deftest trace-limit-multiple-traces
+  (testing ":limit handling with multiple traced vars"
+    (let [foo-call-count (atom 0)
+          expected-foo-call-count 5
+          bar-call-count (atom 0)
+          expected-bar-call-count 7]
+      (trace #'foo :limit expected-foo-call-count :report-before-fn (fn [_] (inc-atom foo-call-count)))
+      (trace #'bar :limit expected-bar-call-count :report-before-fn (fn [_] (inc-atom bar-call-count)))
+      (dotimes [i 10]
+        (foo)
+        (bar))
+      (is (= expected-foo-call-count @foo-call-count)
+          "The trace report function should fire no more than the number of times specified.")
+      (is (= expected-bar-call-count @bar-call-count)
+          "The trace report function should fire no more than the number of times specified."))))
+
+(deftest trace-limit-conditional
+  (testing "interaction of :limit and :when-fn"
+    (with-redefs [foo identity]
+      (let [call-count (atom 0)
+            example-data [1 :b 2 :c 3 :d 4 :e 5 :f]
+            limit 2
+            expected-call-count (min (count (filter keyword? example-data)) limit)
+            expected-return-values (map foo example-data)]
+        (trace #'foo :limit limit :when-fn keyword? :report-before-fn (fn [_] (inc-atom call-count)))
+        (is (= expected-return-values (map foo example-data))
+            "The traced function didn't return the same value as the untraced function.")
+        (is (= expected-call-count @call-count)
+            "When a :when-fn is specified, only calls which match the :when-fn should count toward the limit.")))))
