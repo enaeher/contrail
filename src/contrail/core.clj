@@ -75,12 +75,19 @@
     (doall thunk)
     thunk))
 
-(defn- get-predicate [when-fn arg-count within]
+(defn- get-predicate
+  "Returns a function which, when called with the traced function's
+  argument list (as a sequence), determines whether or not to run
+  trace reporting for this invocation of the traced function."
+  [when-fn arg-count within]
   (apply every-pred `(~#(apply when-fn %)
                       ~@(when within (list (fn [_] (within/within? @within))))
                       ~@(when arg-count (list #(= arg-count (count %)))))))
 
-(defn get-trace-report-fn [report-before-fn report-after-fn]
+(defn get-trace-report-fn
+  "Returns a function which unconditionally wraps `f` with trace
+  reporting."
+  [report-before-fn report-after-fn]
   (fn [f & args]
     (report-before-fn args)
     (let [retval (binding [*trace-level* (inc *trace-level*)]
@@ -88,7 +95,13 @@
       (report-after-fn retval)
       retval)))
 
-(defn- wrap-with-counter [f limit]
+(defn- wrap-with-counter
+  "Wraps `f`, which must be a trace reporting function whose first
+  argument is the traced function, such that, after it is run `limit`
+  times, the traced function is called directly and `f` is no longer
+  called. Additionally sets up a watch such that, after `f` is called
+  `limit` times, the traced var is untraced."
+  [f limit]
   (let [remaining-count (atom limit)]
     (add-watch remaining-count (gensym)
                (fn [key _ _ new-value]
@@ -99,7 +112,7 @@
       ;; Necessary to avoid a race condition where we've called
       ;; untrace, which alters the var root to remove the trace, but
       ;; an unrealized sequence still maintains a reference to the
-      ;; traced function
+      ;; traced function.
       (if (zero? @remaining-count)
         (apply traced-f args)
         (let [retval (apply f traced-f args)]
@@ -111,7 +124,11 @@
     (wrap-with-counter f limit)
     f))
 
-(defn- get-wrapped-fn [f when-fn within limit report-before-fn report-after-fn arg-count]
+(defn- get-wrapped-fn
+  "Returns a function wrapping `f` with trace reporting as specified
+  by the remaining arguments, and which is suitable for passing to
+  `richelieu/advise-var`."
+  [f when-fn within limit report-before-fn report-after-fn arg-count]
   (let [predicate (get-predicate when-fn arg-count within)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
         trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]

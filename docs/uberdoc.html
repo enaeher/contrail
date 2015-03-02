@@ -2919,21 +2919,56 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn- maybe-force-eager-evaluation [thunk]
   (if (and *force-eager-evaluation* (seq? thunk))
     (doall thunk)
-    thunk))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- get-predicate [when-fn arg-count within]
+    thunk))</pre></td></tr><tr><td class="docs"><p>Returns a function which, when called with the traced function's
+  argument list (as a sequence), determines whether or not to run
+  trace reporting for this invocation of the traced function.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-predicate
+  [when-fn arg-count within]
   (apply every-pred `(~#(apply when-fn %)
                       ~@(when within (list (fn [_] (within/within? @within))))
-                      ~@(when arg-count (list #(= arg-count (count %)))))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn get-trace-report-fn [report-before-fn report-after-fn]
+                      ~@(when arg-count (list #(= arg-count (count %)))))))</pre></td></tr><tr><td class="docs"><p>Returns a function which unconditionally wraps <code>f</code> with trace
+  reporting.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn get-trace-report-fn
+  [report-before-fn report-after-fn]
   (fn [f &amp; args]
     (report-before-fn args)
     (let [retval (binding [*trace-level* (inc *trace-level*)]
                    (maybe-force-eager-evaluation (apply f args)))]
       (report-after-fn retval)
-      retval)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn- get-wrapped-fn [f when-fn report-before-fn report-after-fn arg-count within]
+      retval)))</pre></td></tr><tr><td class="docs"><p>Wraps <code>f</code>, which must be a trace reporting function whose first
+  argument is the traced function, such that, after it is run <code>limit</code>
+  times, the traced function is called directly and <code>f</code> is no longer
+  called. Additionally sets up a watch such that, after <code>f</code> is called
+  <code>limit</code> times, the traced var is untraced.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- wrap-with-counter
+  [f limit]
+  (let [remaining-count (atom limit)]
+    (add-watch remaining-count (gensym)
+               (fn [key _ _ new-value]
+                 (when (zero? new-value)
+                   (untrace richelieu/*current-advised*)
+                   (remove-watch remaining-count key))))
+    (fn [traced-f &amp; args]
+      ;; Necessary to avoid a race condition where we've called
+      ;; untrace, which alters the var root to remove the trace, but
+      ;; an unrealized sequence still maintains a reference to the
+      ;; traced function.
+      (if (zero? @remaining-count)
+        (apply traced-f args)
+        (let [retval (apply f traced-f args)]
+          (swap! remaining-count dec)
+          retval)))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- maybe-wrap-with-counter [f limit]
+  (if limit
+    (wrap-with-counter f limit)
+    f))</pre></td></tr><tr><td class="docs"><p>Returns a function wrapping <code>f</code> with trace reporting as specified
+  by the remaining arguments, and which is suitable for passing to
+  <code>richelieu/advise-var</code>.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn- get-wrapped-fn
+  [f when-fn within limit report-before-fn report-after-fn arg-count]
   (let [predicate (get-predicate when-fn arg-count within)
-        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)]
+        trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
+        trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]
     (fn [f &amp; args]
       (if (predicate args)
         (apply trace-report-fn f args)
@@ -2946,15 +2981,22 @@ net.brehaut.ClojureTools = (function (SH) {
   the same args as the traced functions. If <code>when-fn</code> is not provided,
   every call to the traced function will be reported.</p>
 
+<p>  If <code>within</code> (a var bound to a function) is provided, the trace
+  reporting will only occur when the traced function is called while
+  the specified <code>within</code> function is on the stack.</p>
+
 <p>  If <code>arg-count</code> (an integer) is provided, the trace reporting will
   only occur when the traced function is called with that number of
   arguments. (Note that this is not a true arity selector, since,
   there is no way to specify that only the variadic arity of a
   multi-arity function should be traced.)</p>
 
-<p>  If <code>within</code> (a var bound to a function) is provided, the trace
-  reporting will only occur when the traced function is called while
-  the specified <code>within</code> function is on the stack.</p>
+<p>  If <code>limit</code> (an integer) is provided, the trace reporting will only
+  occur <code>limit</code> number of times, after which <code>untrace</code> will be called
+  on the traced var. (If <code>limit</code> is specified in combination with
+  <code>when-fn</code>, <code>within</code>, or <code>arg-count</code>, only calls to the traced
+  function which actually meet those conditions and result in trace
+  reporting will count toward the limit.)</p>
 
 <p>  If <code>report-before-fn</code> is provided, it will be called before the
   traced function is called, with the same arguments as the traced
@@ -2966,7 +3008,7 @@ net.brehaut.ClojureTools = (function (SH) {
   argument, and should print some useful output. It defaults to
   <code>trace.core/report-after</code> if not provided.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn trace
-  [f &amp; {:keys [when-fn report-before-fn report-after-fn arg-count within]
+  [f &amp; {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
              report-before-fn report-before
              report-after-fn report-after}}]
@@ -2979,14 +3021,15 @@ net.brehaut.ClojureTools = (function (SH) {
   (when (traced? f)
     (println f &quot;already traced, untracing first.&quot;)
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn report-before-fn report-after-fn arg-count within)]
+  (let [advice-fn (get-wrapped-fn f when-fn within limit report-before-fn report-after-fn arg-count)]
     (richelieu/advise-var f advice-fn)
     (swap! traced-vars assoc f advice-fn)
     f))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.within" name="contrail.within"><h1 class="project-name">contrail.within</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.within)</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn- match? [potentially-enclosing-fn stack-trace-element]
   (= (.getName (class potentially-enclosing-fn))
-     (.getClassName stack-trace-element)))</pre></td></tr><tr><td class="docs"><p>Returns true if potentially-enclosing-var </p>
+     (.getClassName stack-trace-element)))</pre></td></tr><tr><td class="docs"><p>Returns true if potentially-enclosing-fn is currently on the
+  stack.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn within?
   [potentially-enclosing-fn]
   (some (partial match? potentially-enclosing-fn)
