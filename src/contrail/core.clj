@@ -66,13 +66,13 @@
   "Prints a nicely-formatted list of the currently-traced function
   with its `args`, indented based on the current `*trace-level*`"
   [args]
-  (pprint/cl-format true "~&~vt~d: (~s~@[ ~{~s~^ ~}~])~%" (trace-indent) *trace-level* richelieu/*current-advised* args))
+  (pprint/cl-format *trace-out* "~&~vt~d: (~s~@[ ~{~s~^ ~}~])~%" (trace-indent) *trace-level* richelieu/*current-advised* args))
 
 (defn report-after
   "Prints a nicely-formatted list of the currently-traced function
   with its `retval`, indented based on the current `*trace-level*`."
   [retval]
-  (pprint/cl-format true "~&~vt~d: ~s returned ~s~%" (trace-indent) *trace-level* richelieu/*current-advised* retval))
+  (pprint/cl-format *trace-out* "~&~vt~d: ~s returned ~s~%" (trace-indent) *trace-level* richelieu/*current-advised* retval))
 
 (defn- maybe-force-eager-evaluation [thunk]
   (if (and *force-eager-evaluation* (seq? thunk))

@@ -241,8 +241,6 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 ## Todo
 
-- Allow redirection of trace output (without having to rebind `*out*`)
-
 - Figure out how to handle var re-definition (currently Contrail can
   get confused about the trace state of vars in this case)
 
