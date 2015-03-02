@@ -1,11 +1,11 @@
-[![Build Status](https://travis-ci.org/enaeher/contrail.svg?branch=master)](https://travis-ci.org/enaeher/contrail)
-
-# contrail
+# contrail [![Build Status](https://travis-ci.org/enaeher/contrail.svg?branch=master)](https://travis-ci.org/enaeher/contrail)
 
 Contrail is a library for interactively tracing your code in the
 REPL during development. It is heavily inspired by the excellent
 tracing facilities provided by
 [SBCL](http://www.sbcl.org/manual/#Function-Tracing).
+
+[![Clojars Project](http://clojars.org/enaeher/contrail/latest-version.svg)](http://clojars.org/enaeher/contrail)
 
 ## Why?
 
