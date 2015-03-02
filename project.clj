@@ -7,5 +7,4 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [thunknyc/richelieu "0.4.0"]]
-  :plugins [[lein-marginalia "0.8.0"]]
-  :main contrail.core)
+  :plugins [[lein-marginalia "0.8.0"]])
