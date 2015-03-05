@@ -149,3 +149,38 @@
           "Trace reporting shouldn't produce anything on *out* when *trace-out* is bound to something else.")
       (is (seq (str *trace-out*))
           "Trace reporting should produce output on *trace-out*"))))
+
+(deftest trace-eager-evaluation
+  (testing "with *force-eager-evaluation* set to true"
+    (let [ls (range 1 10)]
+      (with-redefs [foo (fn [_])]
+        (trace #'foo)
+        (foo ls)
+        (is (realized? ls)
+            "arguments to traced functions should be realized by the default reporting")))
+    (let [ls (range 1 10)]
+      (with-redefs [foo (fn [] ls)]
+        (trace #'foo :report-after-fn (fn [_]
+                                        (is (realized? ls)
+                                            "return values from traced functions should be realized")))
+        (foo)))))
+
+(deftest trace-lazy-evaluation
+  (testing "with *force-eager-evaluation* set to false"
+    (binding [*force-eager-evaluation* false]
+      (let [ls (range 1 10)]
+        (with-redefs [foo (fn [_])]
+          (trace #'foo)
+          (foo ls)
+          (is (not (realized? ls))
+              "arguments to traced functions should not be realized by the default reporting")))
+      (let [ls (range 1 10)]
+        (with-redefs [foo (fn [] ls)]
+          (trace #'foo :report-after-fn (fn [_]
+                                          (is (not (realized? ls))
+                                              "return values from traced functions should not be realized before the reporting runs")))
+          (foo)
+          (trace #'foo)
+          (foo)
+          (is (not (realized? ls))
+              "return values from traced functions should not be realized after the default reporting runs"))))))
