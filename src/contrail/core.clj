@@ -6,7 +6,7 @@
 
 (def ^:dynamic *trace-out*
   "Trace output will be sent to this writer, which defaults to `*out*`."
-  *out*)
+  true)
 
 (def ^:dynamic *trace-level*
   "Within a `report-before-fn` or `report-after-fn`, `*trace-level*`
