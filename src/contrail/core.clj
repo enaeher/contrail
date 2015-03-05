@@ -21,10 +21,15 @@
   2)
 
 (def ^:dynamic *force-eager-evaluation*
-  "When true (the default), return values of traced functions are
-  always realized immediately to ensure that trace output is printed
-  in logical order and that `*trace-level*` is always bound to the
-  logically-correct value."
+  "When true (the default), the default trace reporting will
+  realize (and print) all arguments to traced functions, and return
+  values of traced functions will be realized immediately to ensure
+  that trace output is printed in logical order and that
+  `*trace-level*` is always bound to the logically-correct value.
+
+  When false, unrealized arguments and return values are not realized
+  by the default trace reporting (and their contents are not printed)
+  and return values are not forcibly realized."
   true)
 
 (defn- trace-indent
@@ -62,22 +67,31 @@
   (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) @traced-vars)]
     (untrace traced-fn)))
 
+(defn- get-string [thing]
+  (if (or (not (instance? clojure.lang.IPending thing))
+          *force-eager-evaluation*
+          (realized? thing))
+    (pr-str thing)
+    (str "#<" (.getName (class thing)) ">")))
+
 (defn report-before
   "Prints a nicely-formatted list of the currently-traced function
   with its `args`, indented based on the current `*trace-level*`"
   [args]
-  (pprint/cl-format *trace-out* "~&~vt~d: (~s~@[ ~{~s~^ ~}~])~%" (trace-indent) *trace-level* richelieu/*current-advised* args))
+  (pprint/cl-format *trace-out* "~&~vt~d: (~s~@[ ~{~a~^ ~}~])~%"
+                    (trace-indent) *trace-level* richelieu/*current-advised* (map get-string args)))
 
 (defn report-after
   "Prints a nicely-formatted list of the currently-traced function
   with its `retval`, indented based on the current `*trace-level*`."
   [retval]
-  (pprint/cl-format *trace-out* "~&~vt~d: ~s returned ~s~%" (trace-indent) *trace-level* richelieu/*current-advised* retval))
+  (pprint/cl-format *trace-out* "~&~vt~d: ~s returned ~a~%"
+                    (trace-indent) *trace-level* richelieu/*current-advised* (get-string retval)))
 
-(defn- maybe-force-eager-evaluation [thunk]
-  (if (and *force-eager-evaluation* (seq? thunk))
-    (doall thunk)
-    thunk))
+(defn- maybe-force-eager-evaluation [thing]
+  (if (and *force-eager-evaluation* (seq? thing))
+    (doall thing)
+    thing))
 
 (defn- get-predicate
   "Returns a function which, when called with the traced function's
