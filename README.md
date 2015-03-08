@@ -7,6 +7,21 @@ tracing facilities provided by
 
 [![Clojars Project](http://clojars.org/enaeher/contrail/latest-version.svg)](http://clojars.org/enaeher/contrail)
 
+- [Why?](#why)
+- [API Documentation](#api-documentation)
+- [Tracing and Lazy Evaluation](#tracing-and-lazy-evaluation)
+- [Usage](#usage)
+  - [The simple case](#the-simple-case)
+  - [What's traced?](#whats-traced)
+  - [Conditional tracing](#conditional-tracing)
+  - [Tracing a specific arity](#tracing-a-specific-arity)
+  - [Tracing one function only within another function](#tracing-one-function-only-within-another-function)
+  - [Tracing a limited number of calls](#tracing-a-limited-number-of-calls)
+  - [Overriding the default trace reporters](#overriding-the-default-trace-reporters)
+- [Caveats and gotchas](#caveats-and-gotchas)
+- [Todo](#todo)
+- [License](#license)
+
 ## Why?
 
 Clojure ships with
@@ -18,14 +33,26 @@ I found clojure.tools.trace's functionality too limited for my needs,
 and its architecture did not lend itself to easy extension in the
 directions I wanted to go.
 
-## Documentation
+## API Documentation
 
 The examples below should get you started, but see the [full API
 documentation](https://rawgit.com/enaeher/contrail/master/docs/uberdoc.html) for further reading.
 
-## Usage
+## Tracing and Lazy Evaluation
 
-### The simple case
+Clojure's lazy sequences add some wrinkles to the tracing concept:
+
+- Trace reporting which prints all arguments to and return values from
+  traced functions will cause those values, if they are lazy
+  sequences, to be fully realized (even if the traced code would
+  normally not realize them, or would do so much later)
+
+- The actual evaluation order and stack may not reflect the "logical"
+  call graph as imagined by the programmer.
+
+For these reasons, Contrail can operate in one of two modes,
+controlled by the `*force-eager-evaluation*` dynamic var. Two examples
+should illustrate the difference:
 
 ```clojure
 contrail.core> (defn ensure-even [i]
@@ -34,6 +61,62 @@ contrail.core> (defn ensure-even [i]
                    i))
 #'contrail.core/ensure-even
 
+contrail.core> (defn ensure-all-even [numbers]
+                 (map ensure-even numbers))
+#'contrail.core/ensure-all-even
+
+;; *force-eager-evaluation* defaults to true
+contrail.core> (ensure-all-even [1 2 3])
+ 0: (#'contrail.core/ensure-all-even [1 2 3])
+  1: (#'contrail.core/ensure-even 1)
+  1: #'contrail.core/ensure-even returned 2
+  1: (#'contrail.core/ensure-even 2)
+  1: #'contrail.core/ensure-even returned 2
+  1: (#'contrail.core/ensure-even 3)
+  1: #'contrail.core/ensure-even returned 4
+ 0: #'contrail.core/ensure-all-even returned (2 2 4)
+(2 2 4)
+
+contrail.core> (alter-var-root #'*force-eager-evaluation* (constantly false))
+false
+
+contrail.core> (ensure-all-even [1 2 3])
+ 0: (#'contrail.core/ensure-all-even [1 2 3])
+ 0: #'contrail.core/ensure-all-even returned #<clojure.lang.LazySeq>
+ 0: (#'contrail.core/ensure-even 1)
+ 0: #'contrail.core/ensure-even returned 2
+ 0: (#'contrail.core/ensure-even 2)
+ 0: #'contrail.core/ensure-even returned 2
+ 0: (#'contrail.core/ensure-even 3)
+ 0: #'contrail.core/ensure-even returned 4
+(2 2 4)
+```
+
+In general, a true value for `*force-eager-evaluation*` will provide
+traces which include more information and more closely model the
+programmer's (or at least this programmer's) conceptual view of the
+code, while a false value will provide traces which don't cause the
+potentially-expensive (or impossible) realization of lazy sequences
+and which more closely reflect the actual execution order of the
+untraced code.
+
+Note that if you provide your own trace reporting functions with the
+`:report-before-fn` or `:report-after-fn` args, you are not bound by
+`*force-eager-evaluation*` and may realize (nor not) sequences as you
+like, with the exception that if `*force-eager-evaluation*` is true,
+return values will still be fully realized before your
+`:report-after-fn` is called, so that trace output will appear in the
+"right" order. One common use-case for custom trace reporting
+functions is to more closely control what gets realized; for example,
+if you know that a certain argument is likely to be a long sequence
+that involves expensive network calls to realize, you might choose to
+print only the first few items of the sequence.
+
+## Usage
+
+### The simple case
+
+```clojure
 contrail.core> (trace #'ensure-even)
 #'contrail.core/ensure-even
 
@@ -63,28 +146,6 @@ Untracing #'clojure.core/every?
 nil
 ```
 
-### Nested tracing
-
-```clojure
-contrail.core> (defn ensure-all-even [numbers]
-                 (map ensure-even numbers))
-#'contrail.core/ensure-all-even
-
-contrail.core> (trace #'ensure-all-even)
-#'contrail.core/ensure-all-even
-
-contrail.core> (ensure-all-even [1 2 3])
- 0: (#'contrail.core/ensure-all-even [1 2 3])
-  1: (#'contrail.core/ensure-even 1)
-  1: #'contrail.core/ensure-even returned 2
-  1: (#'contrail.core/ensure-even 2)
-  1: #'contrail.core/ensure-even returned 2
-  1: (#'contrail.core/ensure-even 3)
-  1: #'contrail.core/ensure-even returned 4
- 0: #'contrail.core/ensure-all-even returned (2 2 4)
-(2 2 4)
-```
-
 ### Conditional tracing
 
 ```clojure
@@ -102,6 +163,10 @@ contrail.core> (ensure-all-even [1 2 3])
  0: #'contrail.core/ensure-all-even returned (2 2 4)
 (2 2 4)
 ```
+
+*N.B.:* If you provide a `:when-fn`, it must be able to accept any
+arity with which the traced function is called during tracing;
+otherwise, you will get an error.
 
 ### Tracing a specific arity
 
@@ -126,6 +191,14 @@ contrail.core> (minimum 1 2 3 4 5)
  0: (#'contrail.core/minimum 1 5)
  0: #'contrail.core/minimum returned 1
 1
+```
+
+*N.B.:* - `:arg-count` does not work as a true arity selector, because it
+doesn't allow you to trace only the variadic arity of a multi-arity
+function. To do that, you'll need to do something like:
+
+```clojure
+:when-fn (fn [& args] (> (count args) greatest-definite-arity))
 ```
 
 ### Tracing one function only within another function
@@ -153,7 +226,24 @@ contrail.core> (baz)
 nil
 ```
 
-N.B.: numerous and severe caveats apply, see [below](#caveats-and-gotchas).
+*N.B.:* `:within` operates by introspecting the current thread's
+stack, which means that not only won't it work across newly-created
+threads, but it often won't work in contexts where the `:within`
+function returns a lazy sequence. Consider the following:
+
+```clojure
+(defn x [])
+
+(defn y []
+  (map x [1 2 3]))
+```
+
+Since `map` (and thus `y`) returns a lazy sequence, the sequence
+won't be realized (and `x` won't be called) until after `y` has
+returned, which means that if you look at the call stack from within
+`x`, `y` will be long gone, so `(trace #'x :within #'y)` will never
+print any output. Yes, this is a very frustrating limitation, but
+I'm not sure that it's possible to get around it in Clojure.
 
 ### Tracing a limited number of calls
 
@@ -197,47 +287,7 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 ## Caveats and gotchas
 
-- By default, any lazy sequence returned by a traced function will be
-  immediately realized, regardless of whether you are using the
-  default `report-after-fn` or your own. This is necessary to ensure
-  that that trace output is printed in logical order and that
-  `*trace-level*` is bound to the logically-correct value.
-
-  In some cases, you may prefer to disable this behavior, which you
-  can do by binding `*force-eager-evaluation*` to false.
-
 - Inline functions and Java methods cannot be traced.
-
-- If you provide a `:when-fn`, it must be able to accept any arity
-  with which the traced function is called during tracing; otherwise,
-  you will get an error.
-
-- `:arg-count` does not work as a true arity selector, because it
-  doesn't allow you to trace only the variadic arity of a multi-arity
-  function. To do that, you'll need to do something like:
-
-  ```clojure
-  :when-fn (fn [& args] (> (count args) greatest-definite-arity))
-  ```
-
-- `:within` operates by introspecting the current thread's stack,
-  which means that not only won't it work across newly-created
-  threads, but it often won't work in contexts where the `:within`
-  function returns a lazy sequence. Consider the following:
-
-  ```clojure
-  (defn x [])
-
-  (defn y []
-    (map x [1 2 3]))
-  ```
-
-  Since `map` (and thus `y`) returns a lazy sequence, the sequence
-  won't be realized (and `x` won't be called) until after `y` has
-  returned, which means that if you look at the call stack from within
-  `x`, `y` will be long gone, so `(trace #'x :within #'y)` will never
-  print any output. Yes, this is a very frustrating limitation, but
-  I'm not sure that it's possible to get around it in Clojure.
 
 ## Todo
 
