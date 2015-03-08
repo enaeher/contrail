@@ -67,7 +67,16 @@
   (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) @traced-vars)]
     (untrace traced-fn)))
 
-(defn- get-string [thing]
+(defn current-traced-var []
+  richelieu/*current-advised*)
+
+(defn- get-string
+  "Equivalent to `pr-str` except in the case that `thing` is an
+  unrealized lazy sequence and `*force-eager-evaluation*` is not true,
+  then returns an unreadable string representation which doesn't
+  realize the sequence. (Note that `str` cannot be used here, as it
+  realizes the sequence.)"
+  [thing]
   (if (or (not (instance? clojure.lang.IPending thing))
           *force-eager-evaluation*
           (realized? thing))
@@ -79,14 +88,14 @@
   with its `args`, indented based on the current `*trace-level*`"
   [args]
   (pprint/cl-format *trace-out* "~&~vt~d: (~s~@[ ~{~a~^ ~}~])~%"
-                    (trace-indent) *trace-level* richelieu/*current-advised* (map get-string args)))
+                    (trace-indent) *trace-level* (current-traced-var) (map get-string args)))
 
 (defn report-after
   "Prints a nicely-formatted list of the currently-traced function
   with its `retval`, indented based on the current `*trace-level*`."
   [retval]
   (pprint/cl-format *trace-out* "~&~vt~d: ~s returned ~a~%"
-                    (trace-indent) *trace-level* richelieu/*current-advised* (get-string retval)))
+                    (trace-indent) *trace-level* (current-traced-var) (get-string retval)))
 
 (defn- maybe-force-eager-evaluation [thing]
   (if (and *force-eager-evaluation* (seq? thing))
@@ -124,7 +133,7 @@
     (add-watch remaining-count (gensym)
                (fn [key _ _ new-value]
                  (when (zero? new-value)
-                   (untrace richelieu/*current-advised*)
+                   (untrace (current-traced-var))
                    (remove-watch remaining-count key))))
     (fn [traced-f & args]
       ;; Necessary to avoid a race condition where we've called
