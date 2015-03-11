@@ -1,11 +1,13 @@
 (ns contrail.core-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.string :as str]
+            [clojure.test :refer :all]
             [contrail.core :refer :all]))
 
-(use-fixtures :each (fn [f] (untrace) (f)))
-
-(defn foo "An example function used to test tracing" [])
-(defn bar "Another example function used to test nested tracing" [])
+(use-fixtures :each
+  (fn [f] (untrace)
+    (defn foo "An example function used to test tracing" [])
+    (defn bar "Another example function used to test nested tracing" [])
+    (f)))
 
 (defn- inc-atom [a]
   (swap! a inc))
@@ -26,6 +28,14 @@
         (foo))
       (is (= expected-call-count @call-count)
           "Trace report function wasn't called the same number of times as the traced function was called"))))
+
+(deftest untrace-stops-tracing
+  (testing "trace reporting doesn't fire after untrace"
+    (let [call-count (atom 0)]
+      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+      (untrace)
+      (is (empty? (with-out-str (foo))) "After untrace, no trace output should be generated")
+      (is (zero? @call-count) "Trace shouldn't persist after untrace"))))
 
 (deftest traced-function-returns-normally
   (testing "Return values of traced functions"
@@ -127,7 +137,7 @@
           "The trace report function should fire no more than the number of times specified."))))
 
 (deftest trace-limit-conditional
-  (testing "interaction of :limit and :when-fn"
+  (testing "Interaction of :limit and :when-fn"
     (with-redefs [foo identity]
       (let [call-count (atom 0)
             example-data [1 :b 2 :c 3 :d 4 :e 5 :f]
@@ -151,7 +161,7 @@
           "Trace reporting should produce output on *trace-out*"))))
 
 (deftest trace-eager-evaluation
-  (testing "with *force-eager-evaluation* set to true"
+  (testing "With *force-eager-evaluation* set to true"
     (let [ls (range 1 10)]
       (with-redefs [foo (fn [_])]
         (trace #'foo)
@@ -166,7 +176,7 @@
         (foo)))))
 
 (deftest trace-lazy-evaluation
-  (testing "with *force-eager-evaluation* set to false"
+  (testing "With *force-eager-evaluation* set to false"
     (binding [*force-eager-evaluation* false]
       (let [ls (range 1 10)]
         (with-redefs [foo (fn [_])]
@@ -176,11 +186,41 @@
               "arguments to traced functions should not be realized by the default reporting")))
       (let [ls (range 1 10)]
         (with-redefs [foo (fn [] ls)]
-          (trace #'foo :report-after-fn (fn [_]
-                                          (is (not (realized? ls))
-                                              "return values from traced functions should not be realized before the reporting runs")))
+          (trace #'foo :report-after-fn
+                 (fn [_]
+                   (is (not (realized? ls))
+                       "return values from traced functions should not be realized before the reporting runs")))
           (foo)
           (trace #'foo)
           (foo)
           (is (not (realized? ls))
               "return values from traced functions should not be realized after the default reporting runs"))))))
+
+(deftest trace-survives-redef
+  (testing "Traced vars should remain traced even if they are re-defined"
+    (let [call-count (atom 0)]
+      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+      (defn foo [])
+      (foo)
+      (is (traced? #'foo) "Trace state should be tracked correctly after redef")
+      (is (= 1 @call-count) "Trace reporting should fire after redef"))
+    (let [call-count (atom 0)]
+      (trace #'foo :when-fn #'odd? :report-before-fn (fn [_] (inc-atom call-count)))
+      (defn foo [_])
+      (foo 1)
+      (foo 2)
+      (is (= 1 @call-count) "Conditional trace options should be retained after redef"))))
+
+(deftest untrace-after-redef
+  (testing "Untracing a var should continue to work after it's been re-defined"
+    (trace #'foo)
+    (defn foo [])
+    (untrace #'foo)
+    (is (empty? (with-out-str (foo))) "After untrace, no trace output should be generated")))
+
+(deftest untrace-plays-nice-with-redef
+  (testing "If a var is untraced within a with-redef, it should continue to be untraced after the with-redef"
+    (trace #'foo)
+    (with-redefs [foo (fn [])]
+      (untrace #'foo)) 
+    (is (empty? (with-out-str (foo))) "After untrace, no trace output should be generated")))
