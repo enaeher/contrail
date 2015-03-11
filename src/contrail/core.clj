@@ -37,6 +37,11 @@
   []
   (* *trace-indent-per-level* *trace-level*))
 
+(def ^:private ^:dynamic *suppress-retracing?*
+  "Used to prevent infinite recursion when re-tracing a var after it
+  has been re-defined by the user"
+  false)
+
 (defonce ^:private traced-vars (atom '{}))
 
 (defn all-traced
@@ -50,6 +55,12 @@
   [f]
   (boolean (some #{f} (keys @traced-vars))))
 
+(defn- untrace* [f]
+  (binding [*suppress-retracing?* true]
+    (remove-watch f "contrail")
+    (richelieu/unadvise-var f (@traced-vars f))
+    (swap! traced-vars dissoc f)))
+
 (defn untrace
   "When called with no arguments, untraces all traced functions. When
   passed a var `f`, untraces the function bound to that var."
@@ -57,9 +68,8 @@
    (doseq [[f _] @traced-vars]
      (untrace f)))
   ([f]
-   (richelieu/unadvise-var f (@traced-vars f))
    (println "Untracing" f)
-   (swap! traced-vars dissoc f)))
+   (untrace* f)))
 
 (defn untrace-ns
   "Untraces every traced var in the namespace `ns`"
@@ -164,6 +174,10 @@
         (apply trace-report-fn f args)
         (apply f args)))))
 
+(defn- trace* [traced-var advice-fn]
+  (richelieu/advise-var traced-var advice-fn)
+  (swap! traced-vars assoc traced-var advice-fn))
+
 (defn trace
   "Turns on tracing for the function bound to `f`, a var. If `f` is
   already traced, trace will untrace it (warning the user), then
@@ -213,7 +227,13 @@
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (let [advice-fn (get-wrapped-fn f when-fn within limit report-before-fn report-after-fn arg-count)]
-    (richelieu/advise-var f advice-fn)
-    (swap! traced-vars assoc f advice-fn)
+  (let [wrapping-fn #(get-wrapped-fn % when-fn within limit report-before-fn report-after-fn arg-count)
+        advice-fn (wrapping-fn f)]
+    (trace* f advice-fn)
+    (add-watch f "contrail"
+               (fn [_ traced-var _ new-var-value]
+                 (when-not *suppress-retracing?*
+                   (binding [*suppress-retracing?* true]
+                     (println f "changed, re-tracing.")
+                     (trace* traced-var (wrapping-fn (richelieu/advised new-var-value)))))))
     f))
