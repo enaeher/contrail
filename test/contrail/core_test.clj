@@ -4,7 +4,8 @@
             [contrail.core :refer :all]))
 
 (use-fixtures :each
-  (fn [f] (untrace)
+  (fn [f]
+    (untrace)
     (defn foo "An example function used to test tracing" [])
     (defn bar "Another example function used to test nested tracing" [])
     (f)))
@@ -218,7 +219,7 @@
     (untrace #'foo)
     (is (empty? (with-out-str (foo))) "After untrace, no trace output should be generated")))
 
-(deftest untrace-plays-nice-with-redef
+(deftest untrace-plays-nice-with-with-redef
   (testing "If a var is untraced within a with-redef, it should continue to be untraced after the with-redef"
     (trace #'foo)
     (with-redefs [foo (fn [])]
