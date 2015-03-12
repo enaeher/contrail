@@ -151,11 +151,11 @@
     (wrap-with-counter f limit)
     f))
 
-(defn- get-wrapped-fn
-  "Returns a function wrapping `f` with trace reporting as specified
-  by the remaining arguments, and which is suitable for passing to
-  `richelieu/advise-var`."
-  [f when-fn within limit report-before-fn report-after-fn arg-count]
+(defn- get-advice-fn
+  "Returns a function wrapping its argument `f` with trace reporting
+  as specified by the remaining arguments to `get-advice-fn`, and
+  which is suitable for passing to `richelieu/advise-var`."
+  [when-fn within limit report-before-fn report-after-fn arg-count]
   (let [predicate (get-predicate when-fn arg-count within)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
         trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]
@@ -213,5 +213,5 @@
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (advice/advise f #(get-wrapped-fn % when-fn within limit report-before-fn report-after-fn arg-count))
+  (advice/advise f (get-advice-fn when-fn within limit report-before-fn report-after-fn arg-count))
   f)
