@@ -24,14 +24,14 @@ tracing facilities provided by
 
 ## Why?
 
-Clojure ships with
-[clojure.tools.trace](https://github.com/clojure/tools.trace), which
-has some nice features like Cider integration, so why did I write
-Contrail?
+Why did I write Contrail when Clojure ships with [clojure.tools.trace](https://github.com/clojure/tools.trace)? The latter's funcationality was too limited for my needs, and its design didn't lent itself to easy extension in the directions I wanted to go.
 
-I found clojure.tools.trace's functionality too limited for my needs,
-and its architecture did not lend itself to easy extension in the
-directions I wanted to go.
+Contrail's distinguishing features include:
+- Control over what the trace output looks like and where it goes
+- Control over whether and when lazy sequences are realized by the trace machinery
+- Conditional tracing, with helpers for common use cases
+- Tracing for a limited number of calls
+- Re-compiling a file doesn't blow away trace state for the vars defined there
 
 ## API Documentation
 
@@ -290,9 +290,6 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 - Inline functions and Java methods cannot be traced.
 
 ## Todo
-
-- Figure out how to handle var re-definition (currently Contrail can
-  get confused about the trace state of vars in this case)
 
 - Improve `:report-before-fn` and `:report-after-fn` protocols so that
   the user doesn't need to know so much about Contrail internals to
