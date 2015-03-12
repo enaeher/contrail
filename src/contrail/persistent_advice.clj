@@ -24,13 +24,13 @@
   (first (filter (comp :traced-by-contrail meta) (richelieu/advice (deref f)))))
 
 (defn unadvise* [f]
-  (richelieu/unadvise-var f (get-our-advising-fn f)))
+  (binding [*suppress-readvising?* true]
+    (richelieu/unadvise-var f (get-our-advising-fn f))))
 
 (defn unadvise [f]
-  (binding [*suppress-readvising?* true]
-    (remove-watch f "contrail")
-    (unadvise* f)
-    (swap! advised-vars disj f)))
+  (remove-watch f "contrail")
+  (unadvise* f)
+  (swap! advised-vars disj f))
 
 (defn advise* [f advice-fn]
   (richelieu/advise-var f advice-fn)
@@ -47,8 +47,17 @@
 (defn add-metadata [advice-fn]
   (with-meta advice-fn {:traced-by-contrail true}))
 
+(defn wrap-with-untraced-guard [advice-fn]
+  (fn [f & args]
+    (if ((all-advised) (current-advised))
+      (apply advice-fn f args)
+      (do
+        (unadvise* (current-advised))
+        (apply f args)))))
+
 (defn advise [f advice-fn]
   (let [final-advice-fn (-> advice-fn
+                            wrap-with-untraced-guard
                             add-metadata)]
     (advise* f final-advice-fn)
     (add-watch f "contrail" (get-watcher final-advice-fn))))
