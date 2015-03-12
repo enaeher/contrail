@@ -30,8 +30,11 @@
 
 (deftest with-redef-doesnt-re-advice
   (testing "If a var is unadvised within a redef, it should continue to be unadvised after the with-redef"
-    (advise #'foo sample-advice-fn)
-    (with-redefs [foo (fn [])]
-      (unadvise #'foo))
-    (foo)
-    (is (not (get-our-advising-fn #'foo)) "Advising fn shouldn't have survived unadvise")))
+    (let [was-run? (atom false)]
+      (advise #'foo (fn [& _] (swap! was-run? not)))
+      (with-redefs [foo (fn [])]
+        (unadvise #'foo))
+      (is (get-our-advising-fn #'foo) "The advising function will still be there when the redef exits")
+      (foo)
+      (is (not (get-our-advising-fn #'foo)) "We should remove the advising fn when it tries to run")
+      (is (not @was-run?) "The advising fn should never execute since foo was first called after we'd untraced"))))

@@ -25,15 +25,16 @@
 
 (defn unadvise* [f]
   (binding [*suppress-readvising?* true]
-    (richelieu/unadvise-var f (get-our-advising-fn f))))
+    (richelieu/unadvise-var f (get-our-advising-fn f)))
+  (swap! advised-vars disj f))
 
 (defn unadvise [f]
   (remove-watch f "contrail")
-  (unadvise* f)
-  (swap! advised-vars disj f))
+  (unadvise* f))
 
 (defn advise* [f advice-fn]
-  (richelieu/advise-var f advice-fn)
+  (binding [*suppress-readvising?* true]
+    (richelieu/advise-var f advice-fn))
   (swap! advised-vars conj f))
 
 (defn get-watcher [advice-fn]
