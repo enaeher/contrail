@@ -1,8 +1,8 @@
 (ns contrail.core
   "The main namespace for Contrail."
-  (:require [richelieu.core :as richelieu]
-            [clojure.pprint :as pprint]
-            [contrail.within :as within]))
+  (:require [clojure.pprint :as pprint]
+            [contrail.within :as within]
+            [contrail.persistent-advice :as advice]))
 
 (def ^:dynamic *trace-out*
   "Trace output will be sent to this writer, which defaults to `*out*`."
@@ -37,35 +37,25 @@
   []
   (* *trace-indent-per-level* *trace-level*))
 
-(def ^:private ^:dynamic *suppress-retracing?*
-  "Used to prevent infinite recursion when re-tracing a var after it
-  has been re-defined by the user"
-  false)
-
-(defonce ^:private traced-vars (atom '{}))
-
 (defn all-traced
   "Returns a sequence of all currently-traced vars."
   []
-  (map first @traced-vars))
+  (advice/all-advised))
 
 (defn traced?
   "Returns true if the function bound to var `f` is traced, otherwise
   returns false."
   [f]
-  (boolean (some #{f} (keys @traced-vars))))
+  (boolean (some #{f} (all-traced))))
 
 (defn- untrace* [f]
-  (binding [*suppress-retracing?* true]
-    (remove-watch f "contrail")
-    (richelieu/unadvise-var f (@traced-vars f))
-    (swap! traced-vars dissoc f)))
+  (advice/unadvise f))
 
 (defn untrace
   "When called with no arguments, untraces all traced functions. When
   passed a var `f`, untraces the function bound to that var."
   ([]
-   (doseq [[f _] @traced-vars]
+   (doseq [f (all-traced)]
      (untrace f)))
   ([f]
    (println "Untracing" f)
@@ -74,11 +64,11 @@
 (defn untrace-ns
   "Untraces every traced var in the namespace `ns`"
   [ns]
-  (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) @traced-vars)]
+  (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) (all-traced))]
     (untrace traced-fn)))
 
 (defn current-traced-var []
-  richelieu/*current-advised*)
+  (advice/current-advised))
 
 (defn- get-string
   "Equivalent to `pr-str` except in the case that `thing` is an
@@ -174,10 +164,6 @@
         (apply trace-report-fn f args)
         (apply f args)))))
 
-(defn- trace* [traced-var advice-fn]
-  (richelieu/advise-var traced-var advice-fn)
-  (swap! traced-vars assoc traced-var advice-fn))
-
 (defn trace
   "Turns on tracing for the function bound to `f`, a var. If `f` is
   already traced, trace will untrace it (warning the user), then
@@ -227,13 +213,5 @@
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (let [wrapping-fn #(get-wrapped-fn % when-fn within limit report-before-fn report-after-fn arg-count)
-        advice-fn (wrapping-fn f)]
-    (trace* f advice-fn)
-    (add-watch f "contrail"
-               (fn [_ traced-var _ new-var-value]
-                 (when-not *suppress-retracing?*
-                   (binding [*suppress-retracing?* true]
-                     (println f "changed, re-tracing.")
-                     (trace* traced-var (wrapping-fn (richelieu/advised new-var-value)))))))
-    f))
+  (advice/advise f #(get-wrapped-fn % when-fn within limit report-before-fn report-after-fn arg-count))
+  f)
