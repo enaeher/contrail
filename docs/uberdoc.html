@@ -2870,9 +2870,9 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.core
   (:require [clojure.pprint :as pprint]
             [contrail.within :as within]
-            [contrail.persistent-advice :as advice]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, which defaults to <code>*out*</code>.</p>
+            [contrail.persistent-advice :as advice]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, if bound, otherwise to <em>out</em></p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-out*
-  true)</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
+  nil)</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
   will be bound to the number of traced functions currently on the
   stack, excluding the function being reported upon.</p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-level*
@@ -2890,7 +2890,9 @@ net.brehaut.ClojureTools = (function (SH) {
   by the default trace reporting (and their contents are not printed)
   and return values are not forcibly realized.</p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *force-eager-evaluation*
-  true)</pre></td></tr><tr><td class="docs"><p>Returns the number of spaces to indent at the current <code>*trace-level*</code>.</p>
+  true)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn- get-trace-out []
+  (or *trace-out* *out*))</pre></td></tr><tr><td class="docs"><p>Returns the number of spaces to indent at the current <code>*trace-level*</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- trace-indent
   []
   (* *trace-indent-per-level* *trace-level*))</pre></td></tr><tr><td class="docs"><p>Returns a sequence of all currently-traced vars.</p>
@@ -2927,17 +2929,23 @@ net.brehaut.ClojureTools = (function (SH) {
           *force-eager-evaluation*
           (realized? thing))
     (pr-str thing)
-    (str &quot;#&lt;&quot; (.getName (class thing)) &quot;&gt;&quot;)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
+    (str &quot;#&lt;&quot; (.getName (class thing)) &quot;&gt;&quot;)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn report-arguments [&amp; args]
+  (pprint/cl-format nil &quot;(~s~@[ ~{~a~^ ~}~])&quot; (current-traced-var) (map get-string args)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
   with its <code>args</code>, indented based on the current <code>*trace-level*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-before
-  [args]
-  (pprint/cl-format *trace-out* &quot;~&amp;~vt~d: (~s~@[ ~{~a~^ ~}~])~%&quot;
-                    (trace-indent) *trace-level* (current-traced-var) (map get-string args)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
+  [args report-before-fn]
+  (.write (get-trace-out)
+          (pprint/cl-format nil &quot;~&amp;~vt~d: ~a~%&quot;
+                            (trace-indent) *trace-level* (apply report-before-fn args))))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn report-retval [retval]
+  (pprint/cl-format nil &quot;~s returned ~a&quot; (current-traced-var) (get-string retval)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
   with its <code>retval</code>, indented based on the current <code>*trace-level*</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-after
-  [retval]
-  (pprint/cl-format *trace-out* &quot;~&amp;~vt~d: ~s returned ~a~%&quot;
-                    (trace-indent) *trace-level* (current-traced-var) (get-string retval)))</pre></td></tr><tr><td class="docs">
+  [retval report-after-fn]
+  (.write (get-trace-out)
+          (pprint/cl-format nil &quot;~&amp;~vt~d: ~a~%&quot;
+                            (trace-indent) *trace-level* (report-after-fn retval))))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn- maybe-force-eager-evaluation [thing]
   (if (and *force-eager-evaluation* (seq? thing))
     (doall thing)
@@ -2953,10 +2961,10 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn get-trace-report-fn
   [report-before-fn report-after-fn]
   (fn [f &amp; args]
-    (report-before-fn args)
+    (report-before args report-before-fn)
     (let [retval (binding [*trace-level* (inc *trace-level*)]
                    (maybe-force-eager-evaluation (apply f args)))]
-      (report-after-fn retval)
+      (report-after retval report-after-fn)
       retval)))</pre></td></tr><tr><td class="docs"><p>Wraps <code>f</code>, which must be a trace reporting function whose first
   argument is the traced function, such that, after it is run <code>limit</code>
   times, the traced function is called directly and <code>f</code> is no longer
@@ -3022,20 +3030,21 @@ net.brehaut.ClojureTools = (function (SH) {
 
 <p>  If <code>report-before-fn</code> is provided, it will be called before the
   traced function is called, with the same arguments as the traced
-  function, and should print some useful output. It defaults to
-  <code>contrail.core/report-before</code> if not provided.</p>
+  function, and should return a string to use as output. It defaults
+  to <code>contrail.core/report-arguments</code> if not provided.</p>
 
 <p>  If <code>report-after-fn</code> is provided, it will be called after the traced
   function is called, with that function's return value as its
-  argument, and should print some useful output. It defaults to
-  <code>trace.core/report-after</code> if not provided.</p>
+  argument, and should return a string to use as output. It defaults
+  to <code>trace.core/report-retval</code> if not provided.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn trace
   [f &amp; {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
-             report-before-fn report-before
-             report-after-fn report-after}}]
+             report-before-fn report-arguments
+             report-after-fn report-retval}}]
   {:pre [(var? f)
-         (fn? @f)
+         (or (fn? @f)
+             (instance? clojure.lang.MultiFn @f))
          (if within
            (and (var? within)
                 (fn? @within))
