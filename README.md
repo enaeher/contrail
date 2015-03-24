@@ -222,7 +222,7 @@ contrail.core> (foo)
 nil
 
 contrail.core> (baz)
- 0: (#'contrail.core/foo )
+ 0: (#'contrail.core/foo)
  0: #'contrail.core/foo returned nil
 nil
 ```
