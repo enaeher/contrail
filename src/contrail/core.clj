@@ -5,7 +5,8 @@
             [contrail.persistent-advice :as advice]))
 
 (def ^:dynamic *trace-out*
-  "Trace output will be sent to this writer, if bound, otherwise to *out*"
+  "Trace output will be sent to this writer, if bound, otherwise to
+  `*out*`"
   nil)
 
 (def ^:dynamic *trace-level*

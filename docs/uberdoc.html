@@ -2870,7 +2870,8 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.core
   (:require [clojure.pprint :as pprint]
             [contrail.within :as within]
-            [contrail.persistent-advice :as advice]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, if bound, otherwise to <em>out</em></p>
+            [contrail.persistent-advice :as advice]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, if bound, otherwise to
+  <code>*out*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-out*
   nil)</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
   will be bound to the number of traced functions currently on the
