@@ -88,7 +88,7 @@
     (str "#<" (.getName (class thing)) ">")))
 
 (defn report-arguments [& args]
-  (pprint/cl-format nil "(~s~@[ ~{~a~^ ~}~])" (current-traced-var) (map get-string args)))
+  (pprint/cl-format nil "(~s~@[ ~{~a~^ ~}~])" (current-traced-var) (seq (map get-string args))))
 
 (defn report-before
   "Prints a nicely-formatted list of the currently-traced function
