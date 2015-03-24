@@ -274,7 +274,7 @@ contrail.core> (defn many-splendored-identity [& args]
 contrail.core> (trace #'many-splendored-identity
                       :report-before-fn
                       (fn [& args]
-                        (pprint/cl-format true "(~s ~{~s~^ ~})" (current-traced-var) (map type args))))
+                        (pprint/cl-format nil "(~s ~{~s~^ ~})" (current-traced-var) (map type args))))
 #'contrail.core/many-splendored-identity
 
 contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
