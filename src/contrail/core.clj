@@ -5,8 +5,8 @@
             [contrail.persistent-advice :as advice]))
 
 (def ^:dynamic *trace-out*
-  "Trace output will be sent to this writer, which defaults to `*out*`."
-  true)
+  "Trace output will be sent to this writer, if bound, otherwise to *out*"
+  nil)
 
 (def ^:dynamic *trace-level*
   "Within a `report-before-fn` or `report-after-fn`, `*trace-level*`
@@ -31,6 +31,9 @@
   by the default trace reporting (and their contents are not printed)
   and return values are not forcibly realized."
   true)
+
+(defn- get-trace-out []
+  (or *trace-out* *out*))
 
 (defn- trace-indent
   "Returns the number of spaces to indent at the current `*trace-level*`."
@@ -90,8 +93,9 @@
   "Prints a nicely-formatted list of the currently-traced function
   with its `args`, indented based on the current `*trace-level*`"
   [args report-before-fn]
-  (pprint/cl-format *trace-out* "~&~vt~d: ~a~%"
-                    (trace-indent) *trace-level* (apply report-before-fn args)))
+  (.write (get-trace-out)
+          (pprint/cl-format nil "~&~vt~d: ~a~%"
+                            (trace-indent) *trace-level* (apply report-before-fn args))))
 
 (defn report-retval [retval]
   (pprint/cl-format nil "~s returned ~a" (current-traced-var) (get-string retval)))
@@ -100,8 +104,9 @@
   "Prints a nicely-formatted list of the currently-traced function
   with its `retval`, indented based on the current `*trace-level*`."
   [retval report-after-fn]
-  (pprint/cl-format *trace-out* "~&~vt~d: ~a~%"
-                    (trace-indent) *trace-level* (report-after-fn retval)))
+  (.write (get-trace-out)
+          (pprint/cl-format nil "~&~vt~d: ~a~%"
+                            (trace-indent) *trace-level* (report-after-fn retval))))
 
 (defn- maybe-force-eager-evaluation [thing]
   (if (and *force-eager-evaluation* (seq? thing))
