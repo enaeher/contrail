@@ -283,6 +283,28 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 ({:c d, :a b} foo [42] 42 #{})
 ```
 
+Or you might want to keep track of which output comes from which thread:
+
+```clojure
+contrail.core> (def foo identity)
+#'contrail.core/foo
+
+contrail.core> (trace #'foo :report-after-fn (fn [_] (str (current-traced-var) " returned in thread " (Thread/currentThread))))
+
+#'contrail.core/foo
+contrail.core> (pmap foo (range 5))
+(0 1 2 3 4) 0: (#'contrail.core/foo 0)
+ 0: (#'contrail.core/foo 3)
+ 0: (#'contrail.core/foo 1)
+ 0: (#'contrail.core/foo 4)
+ 0: (#'contrail.core/foo 2)
+ 0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-36,5,main]
+ 0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-32,5,main]
+ 0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-34,5,main]
+ 0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-35,5,main]
+ 0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-33,5,main]
+```
+
 ## Caveats and gotchas
 
 - Inline functions and Java methods cannot be traced.
@@ -291,9 +313,6 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 - (Maybe) add the ability to serialize (and later re-apply) the current trace
   state
-
-- Currently, trace output from multiple threads is handled much less
-  gracefully than in `clojure.tools.trace`
 
 ## License
 
