@@ -289,10 +289,6 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 ## Todo
 
-- Improve `:report-before-fn` and `:report-after-fn` protocols so that
-  the user doesn't need to know so much about Contrail internals to
-  handle common cases
-
 - (Maybe) add the ability to serialize (and later re-apply) the current trace
   state
 
