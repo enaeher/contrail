@@ -264,19 +264,17 @@ Untracing #'clojure.core/odd?
 
 ### Overriding the default trace reporters
 
+It is sometimes convenient to override the default trace reporting. For example, you may be interested only in a specific argument, and wish to ignore the others; or you may be interested only in the types of the arguments. The `:report-before-fn` and `:report-after-fn` arguments allow you to provide a function which should return a string to use in place of the default output. (Within that function, you can call `current-traced-var` to get the var being traced.)
+
 ```clojure
 contrail.core> (defn many-splendored-identity [& args]
                  (map identity args))
 #'contrail.core/many-splendored-identity
 
 contrail.core> (trace #'many-splendored-identity
-                      :report-before-fn (fn [args]
-                                          (pprint/cl-format true "~&~vt~d: (~s ~{~s~^ ~})~%"
-                                                            (trace-indent)
-                                                            *trace-level*
-                                                            richelieu/*current-advised*
-                                                            ;; print argument types rather than values	
-                                                            (map type args))))
+                      :report-before-fn
+                      (fn [& args]
+                        (pprint/cl-format true "(~s ~{~s~^ ~})" (current-traced-var) (map type args))))
 #'contrail.core/many-splendored-identity
 
 contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
@@ -297,6 +295,9 @@ contrail.core> (many-splendored-identity {:a 'b :c 'd} 'foo [42] 42 #{})
 
 - (Maybe) add the ability to serialize (and later re-apply) the current trace
   state
+
+- Currently, trace output from multiple threads is handled much less
+  gracefully than in `clojure.tools.trace`
 
 ## License
 

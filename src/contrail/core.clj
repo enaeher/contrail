@@ -83,19 +83,25 @@
     (pr-str thing)
     (str "#<" (.getName (class thing)) ">")))
 
+(defn report-arguments [& args]
+  (pprint/cl-format nil "(~s~@[ ~{~a~^ ~}~])" (current-traced-var) (map get-string args)))
+
 (defn report-before
   "Prints a nicely-formatted list of the currently-traced function
   with its `args`, indented based on the current `*trace-level*`"
-  [args]
-  (pprint/cl-format *trace-out* "~&~vt~d: (~s~@[ ~{~a~^ ~}~])~%"
-                    (trace-indent) *trace-level* (current-traced-var) (map get-string args)))
+  [args report-before-fn]
+  (pprint/cl-format *trace-out* "~&~vt~d: ~a~%"
+                    (trace-indent) *trace-level* (apply report-before-fn args)))
+
+(defn report-retval [retval]
+  (pprint/cl-format nil "~s returned ~a" (current-traced-var) (get-string retval)))
 
 (defn report-after
   "Prints a nicely-formatted list of the currently-traced function
   with its `retval`, indented based on the current `*trace-level*`."
-  [retval]
-  (pprint/cl-format *trace-out* "~&~vt~d: ~s returned ~a~%"
-                    (trace-indent) *trace-level* (current-traced-var) (get-string retval)))
+  [retval report-after-fn]
+  (pprint/cl-format *trace-out* "~&~vt~d: ~a~%"
+                    (trace-indent) *trace-level* (report-after-fn retval)))
 
 (defn- maybe-force-eager-evaluation [thing]
   (if (and *force-eager-evaluation* (seq? thing))
@@ -116,10 +122,10 @@
   reporting."
   [report-before-fn report-after-fn]
   (fn [f & args]
-    (report-before-fn args)
+    (report-before args report-before-fn)
     (let [retval (binding [*trace-level* (inc *trace-level*)]
                    (maybe-force-eager-evaluation (apply f args)))]
-      (report-after-fn retval)
+      (report-after retval report-after-fn)
       retval)))
 
 (defn- wrap-with-counter
@@ -193,17 +199,17 @@
 
   If `report-before-fn` is provided, it will be called before the
   traced function is called, with the same arguments as the traced
-  function, and should print some useful output. It defaults to
-  `contrail.core/report-before` if not provided.
+  function, and should return a string to use as output. It defaults
+  to `contrail.core/report-arguments` if not provided.
 
   If `report-after-fn` is provided, it will be called after the traced
   function is called, with that function's return value as its
-  argument, and should print some useful output. It defaults to
-  `trace.core/report-after` if not provided."
+  argument, and should return a string to use as output. It defaults
+  to `trace.core/report-retval` if not provided."
   [f & {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
-             report-before-fn report-before
-             report-after-fn report-after}}]
+             report-before-fn report-arguments
+             report-after-fn report-retval}}]
   {:pre [(var? f)
          (fn? @f)
          (if within

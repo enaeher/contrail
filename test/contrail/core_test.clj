@@ -24,7 +24,7 @@
   (testing ":report-before-fn is called"
     (let [call-count (atom 0)
           expected-call-count 5]
-      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :report-before-fn (fn [] (inc-atom call-count)))
       (dotimes [i expected-call-count]
         (foo))
       (is (= expected-call-count @call-count)
@@ -33,7 +33,7 @@
 (deftest untrace-stops-tracing
   (testing "trace reporting doesn't fire after untrace"
     (let [call-count (atom 0)]
-      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :report-before-fn (fn [] (inc-atom call-count)))
       (untrace)
       (is (empty? (with-out-str (foo))) "After untrace, no trace output should be generated")
       (is (zero? @call-count) "Trace shouldn't persist after untrace"))))
@@ -50,11 +50,11 @@
 (deftest trace-level
   (testing "Trace level accurately reflects depth of tracing"
     (with-redefs [foo (fn [] (bar))]
-      (trace #'foo :report-before-fn (fn [_] (is (zero? *trace-level*) "*trace-level* should start at 0")))
+      (trace #'foo :report-before-fn (fn [] (is (zero? *trace-level*) "*trace-level* should start at 0")))
       (foo)
       (trace #'bar :report-before-fn
-             (fn [_] (is (= 1 *trace-level*)
-                         "*trace-level* should increase to 1 when called by another traced function")))
+             (fn [] (is (= 1 *trace-level*)
+                        "*trace-level* should increase to 1 when called by another traced function")))
       (foo))))
 
 (deftest trace-level-lazy-seqs
@@ -87,12 +87,12 @@
                         ([] (foo 0))
                         ([i] (inc i)))]
       (let [call-count (atom 0)]
-        (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+        (trace #'foo :report-before-fn (fn [& _] (inc-atom call-count)))
         (foo)
         (is (= 2 @call-count)
             "By default, trace should trace all arities")
         (reset! call-count 0)
-        (trace #'foo :arg-count 1 :report-before-fn (fn [_] (inc-atom call-count)))
+        (trace #'foo :arg-count 1 :report-before-fn (fn [& _] (inc-atom call-count)))
         (foo)
         (is (= 1 @call-count)
             "When an arg-count is specified, trace should trace only calls with that number of args")))))
@@ -101,7 +101,7 @@
   (testing ":within handling"
     (with-redefs [foo (fn [] (bar))]
       (let [call-count (atom 0)]
-        (trace #'bar :within #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+        (trace #'bar :within #'foo :report-before-fn (fn [] (inc-atom call-count)))
         (bar)
         (is (zero? @call-count)
             "The trace report function should not fire when a :within function is provided but is not on the stack.")
@@ -113,7 +113,7 @@
   (testing ":limit handling"
     (let [call-count (atom 0)
           expected-call-count 5]
-      (trace #'foo :limit expected-call-count :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :limit expected-call-count :report-before-fn (fn [] (inc-atom call-count)))
       (dotimes [i 10]
         (foo))
       (is (= expected-call-count @call-count)
@@ -127,8 +127,8 @@
           expected-foo-call-count 5
           bar-call-count (atom 0)
           expected-bar-call-count 7]
-      (trace #'foo :limit expected-foo-call-count :report-before-fn (fn [_] (inc-atom foo-call-count)))
-      (trace #'bar :limit expected-bar-call-count :report-before-fn (fn [_] (inc-atom bar-call-count)))
+      (trace #'foo :limit expected-foo-call-count :report-before-fn (fn [] (inc-atom foo-call-count)))
+      (trace #'bar :limit expected-bar-call-count :report-before-fn (fn [] (inc-atom bar-call-count)))
       (dotimes [i 10]
         (foo)
         (bar))
@@ -200,13 +200,13 @@
 (deftest trace-survives-redef
   (testing "Traced vars should remain traced even if they are re-defined"
     (let [call-count (atom 0)]
-      (trace #'foo :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :report-before-fn (fn [] (inc-atom call-count)))
       (defn foo [])
       (foo)
       (is (traced? #'foo) "Trace state should be tracked correctly after redef")
       (is (= 1 @call-count) "Trace reporting should fire after redef"))
     (let [call-count (atom 0)]
-      (trace #'foo :when-fn #'odd? :report-before-fn (fn [_] (inc-atom call-count)))
+      (trace #'foo :when-fn #'odd? :report-before-fn (fn [& _] (inc-atom call-count)))
       (defn foo [_])
       (foo 1)
       (foo 2)
