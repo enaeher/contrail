@@ -216,7 +216,8 @@
              report-before-fn report-arguments
              report-after-fn report-retval}}]
   {:pre [(var? f)
-         (fn? @f)
+         (or (fn? @f)
+             (instance? clojure.lang.MultiFn @f))
          (if within
            (and (var? within)
                 (fn? @within))

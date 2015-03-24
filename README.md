@@ -18,6 +18,7 @@ tracing facilities provided by
   - [Tracing one function only within another function](#tracing-one-function-only-within-another-function)
   - [Tracing a limited number of calls](#tracing-a-limited-number-of-calls)
   - [Overriding the default trace reporters](#overriding-the-default-trace-reporters)
+  - [Tracing multimethods](#tracing-multimethods)
 - [Caveats and gotchas](#caveats-and-gotchas)
 - [Todo](#todo)
 - [License](#license)
@@ -303,6 +304,91 @@ contrail.core> (pmap foo (range 5))
  0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-34,5,main]
  0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-35,5,main]
  0: #'contrail.core/foo returned in thread Thread[clojure-agent-send-off-pool-33,5,main]
+```
+
+### Tracing multimethods
+
+Multimethods can be traced, but methods can neither be added nor removed from the multimethod (nor existing methods redefined) while the multimethod is traced. However, you can untrace the multimethod, add the new method, and then re-trace (see below). Currently, there is no way to trace only a specific method of a multimethod.
+
+```clojure
+contrail.core> (defmulti deep-reverse type)
+#'contrail.core/deep-reverse
+
+contrail.core> (defmethod deep-reverse :default [x] x)
+#<MultiFn clojure.lang.MultiFn@6b67e98d>
+
+contrail.core> (defmethod deep-reverse clojure.lang.PersistentVector [x] (map deep-reverse (reverse x)))
+#<MultiFn clojure.lang.MultiFn@6b67e98d>
+
+contrail.core> (trace #'deep-reverse)
+#'contrail.core/deep-reverse
+
+contrail.core> (deep-reverse [1 2 3 [4 5 6 "foobar"]])
+ 0: (#'contrail.core/deep-reverse [1 2 3 [4 5 6 "foobar"]])
+  1: (#'contrail.core/deep-reverse [4 5 6 "foobar"])
+    2: (#'contrail.core/deep-reverse "foobar")
+    2: #'contrail.core/deep-reverse returned "foobar"
+    2: (#'contrail.core/deep-reverse 6)
+    2: #'contrail.core/deep-reverse returned 6
+    2: (#'contrail.core/deep-reverse 5)
+    2: #'contrail.core/deep-reverse returned 5
+    2: (#'contrail.core/deep-reverse 4)
+    2: #'contrail.core/deep-reverse returned 4
+  1: #'contrail.core/deep-reverse returned ("foobar" 6 5 4)
+  1: (#'contrail.core/deep-reverse 3)
+  1: #'contrail.core/deep-reverse returned 3
+  1: (#'contrail.core/deep-reverse 2)
+  1: #'contrail.core/deep-reverse returned 2
+  1: (#'contrail.core/deep-reverse 1)
+  1: #'contrail.core/deep-reverse returned 1
+ 0: #'contrail.core/deep-reverse returned (("foobar" 6 5 4) 3 2 1)
+(("foobar" 6 5 4) 3 2 1)
+
+contrail.core> (defmethod deep-reverse java.lang.String [x] (apply str (map deep-reverse (reverse x))))
+ClassCastException clojure.lang.AFunction$1 cannot be cast to clojure.lang.MultiFn  contrail.core/eval115082 (form-init1379520145102690924.clj:1)
+
+contrail.core> (untrace)
+Untracing #'contrail.core/deep-reverse
+nil
+
+contrail.core> (defmethod deep-reverse java.lang.String [x] (apply str (map deep-reverse (reverse x))))
+#<MultiFn clojure.lang.MultiFn@6b67e98d>
+
+contrail.core> (trace #'deep-reverse)
+#'contrail.core/deep-reverse
+
+contrail.core> (deep-reverse [1 2 3 [4 5 6 "foobar"]])
+ 0: (#'contrail.core/deep-reverse [1 2 3 [4 5 6 "foobar"]])
+  1: (#'contrail.core/deep-reverse [4 5 6 "foobar"])
+    2: (#'contrail.core/deep-reverse "foobar")
+      3: (#'contrail.core/deep-reverse \r)
+      3: #'contrail.core/deep-reverse returned \r
+      3: (#'contrail.core/deep-reverse \a)
+      3: #'contrail.core/deep-reverse returned \a
+      3: (#'contrail.core/deep-reverse \b)
+      3: #'contrail.core/deep-reverse returned \b
+      3: (#'contrail.core/deep-reverse \o)
+      3: #'contrail.core/deep-reverse returned \o
+      3: (#'contrail.core/deep-reverse \o)
+      3: #'contrail.core/deep-reverse returned \o
+      3: (#'contrail.core/deep-reverse \f)
+      3: #'contrail.core/deep-reverse returned \f
+    2: #'contrail.core/deep-reverse returned "raboof"
+    2: (#'contrail.core/deep-reverse 6)
+    2: #'contrail.core/deep-reverse returned 6
+    2: (#'contrail.core/deep-reverse 5)
+    2: #'contrail.core/deep-reverse returned 5
+    2: (#'contrail.core/deep-reverse 4)
+    2: #'contrail.core/deep-reverse returned 4
+  1: #'contrail.core/deep-reverse returned ("raboof" 6 5 4)
+  1: (#'contrail.core/deep-reverse 3)
+  1: #'contrail.core/deep-reverse returned 3
+  1: (#'contrail.core/deep-reverse 2)
+  1: #'contrail.core/deep-reverse returned 2
+  1: (#'contrail.core/deep-reverse 1)
+  1: #'contrail.core/deep-reverse returned 1
+ 0: #'contrail.core/deep-reverse returned (("raboof" 6 5 4) 3 2 1)
+(("raboof" 6 5 4) 3 2 1)
 ```
 
 ## Caveats and gotchas
