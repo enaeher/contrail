@@ -2,7 +2,8 @@
   "The main namespace for Contrail."
   (:require [clojure.pprint :as pprint]
             [contrail.within :as within]
-            [contrail.persistent-advice :as advice]))
+            [contrail.persistent-advice :as advice]
+            [richelieu.core :as richelieu]))
 
 (def ^:dynamic *trace-out*
   "Trace output will be sent to this writer, if bound, otherwise to
@@ -176,7 +177,7 @@
         (apply trace-report-fn f args)
         (apply f args)))))
 
-(defn trace
+(richelieu/defadvice trace
   "Turns on tracing for the function bound to `f`, a var. If `f` is
   already traced, trace will untrace it (warning the user), then
   re-enable tracing using the specified options.
