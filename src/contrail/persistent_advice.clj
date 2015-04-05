@@ -38,8 +38,8 @@
   (swap! advised-vars conj f))
 
 (defn get-watcher
-  "Returns a function suitable for use by `add-watcher` which will
-  watch a var and re-advise it with `advice-fn` whenever it changes."
+  "Returns a function suitable for use by `add-watch` which will watch
+  a var and re-advise it with `advice-fn` whenever it changes."
   [advice-fn]
   (fn [_ advised-var _ new-var-value]
     (when-not *suppress-readvising?*
