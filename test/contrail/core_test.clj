@@ -82,7 +82,7 @@
             "The trace report function should only fire when the when-fn returns true.")))))
 
 (deftest trace-arities
-  (testing ":arg-count handling"
+  (testing ":arity handling"
     (with-redefs [foo (fn
                         ([] (foo 0))
                         ([i] (inc i)))]
@@ -92,10 +92,10 @@
         (is (= 2 @call-count)
             "By default, trace should trace all arities")
         (reset! call-count 0)
-        (trace #'foo :arg-count 1 :report-before-fn (fn [& _] (inc-atom call-count)))
+        (trace #'foo :arity 1 :report-before-fn (fn [& _] (inc-atom call-count)))
         (foo)
         (is (= 1 @call-count)
-            "When an arg-count is specified, trace should trace only calls with that number of args")))))
+            "When an arity is specified, trace should trace only calls with that number of args")))))
 
 (deftest trace-within
   (testing ":within handling"

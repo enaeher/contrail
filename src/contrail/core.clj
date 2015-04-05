@@ -118,10 +118,10 @@
   "Returns a function which, when called with the traced function's
   argument list (as a sequence), determines whether or not to run
   trace reporting for this invocation of the traced function."
-  [when-fn arg-count within]
+  [when-fn arity within]
   (apply every-pred `(~#(apply when-fn %)
                       ~@(when within (list (fn [_] (within/within? @within))))
-                      ~@(when arg-count (list #(= arg-count (count %)))))))
+                      ~@(when arity (list #(= arity (count %)))))))
 
 (defn get-trace-report-fn
   "Returns a function which unconditionally wraps `f` with trace
@@ -167,8 +167,8 @@
   "Returns a function wrapping its argument `f` with trace reporting
   as specified by the remaining arguments to `get-advice-fn`, and
   which is suitable for passing to `richelieu/advise-var`."
-  [when-fn within limit report-before-fn report-after-fn arg-count]
-  (let [predicate (get-predicate when-fn arg-count within)
+  [when-fn within limit report-before-fn report-after-fn arity]
+  (let [predicate (get-predicate when-fn arity within)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
         trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]
     (fn [f & args]
@@ -190,7 +190,7 @@
   reporting will only occur when the traced function is called while
   the specified `within` function is on the stack.
 
-  If `arg-count` (an integer) is provided, the trace reporting will
+  If `arity` (an integer) is provided, the trace reporting will
   only occur when the traced function is called with that number of
   arguments. (Note that this is not a true arity selector, since,
   there is no way to specify that only the variadic arity of a
@@ -199,7 +199,7 @@
   If `limit` (an integer) is provided, the trace reporting will only
   occur `limit` number of times, after which `untrace` will be called
   on the traced var. (If `limit` is specified in combination with
-  `when-fn`, `within`, or `arg-count`, only calls to the traced
+  `when-fn`, `within`, or `arity`, only calls to the traced
   function which actually meet those conditions and result in trace
   reporting will count toward the limit.)
 
@@ -212,7 +212,7 @@
   function is called, with that function's return value as its
   argument, and should return a string to use as output. It defaults
   to `trace.core/report-retval` if not provided."
-  [f & {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
+  [f & {:keys [when-fn within arity limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
              report-before-fn report-arguments
              report-after-fn report-retval}}]
@@ -226,5 +226,5 @@
   (when (traced? f)
     (println f "already traced, untracing first.")
     (untrace f))
-  (advice/advise f (get-advice-fn when-fn within limit report-before-fn report-after-fn arg-count))
+  (advice/advise f (get-advice-fn when-fn within limit report-before-fn report-after-fn arity))
   f)

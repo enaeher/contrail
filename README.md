@@ -179,7 +179,7 @@ contrail.core> (defn minimum
                  ([a b & r] (reduce minimum (conj r a b))))
 #'contrail.core/minimum
 
-contrail.core> (trace #'minimum :arg-count 2)
+contrail.core> (trace #'minimum :arity 2)
 #'contrail.core/minimum
 
 contrail.core> (minimum 1 2 3 4 5)
@@ -194,7 +194,7 @@ contrail.core> (minimum 1 2 3 4 5)
 1
 ```
 
-*N.B.:* - `:arg-count` does not work as a true arity selector, because it
+*N.B.:* - `:arity` does not work as a true arity selector, because it
 doesn't allow you to trace only the variadic arity of a multi-arity
 function. To do that, you'll need to do something like:
 
