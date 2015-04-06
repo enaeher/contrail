@@ -1,4 +1,4 @@
-(defproject enaeher/contrail "0.1.1"
+(defproject enaeher/contrail "0.2.0-SNAPSHOT"
   :description "An interactive tracing facility for Clojure"
   :url "http://github.com/enaeher/contrail"
   :scm {:name "git"
