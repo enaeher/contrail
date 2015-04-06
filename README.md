@@ -25,7 +25,7 @@ Available via Clojars: [`[enaeher/contrail "0.2.0"]`](http://clojars.org/enaeher
 
 ## Why?
 
-Why did I write Contrail when Clojure ships with [clojure.tools.trace](https://github.com/clojure/tools.trace)? The latter's funcationality was too limited for my needs, and its design didn't lent itself to easy extension in the directions I wanted to go.
+Why did I write Contrail when Clojure ships with [clojure.tools.trace](https://github.com/clojure/tools.trace)? The latter's functionality was too limited for my needs, and its design didn't lent itself to easy extension in the directions I wanted to go.
 
 Contrail's distinguishing features include:
 - Control over what the trace output looks like and where it goes
