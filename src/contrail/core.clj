@@ -66,12 +66,6 @@
    (println "Untracing" f)
    (untrace* f)))
 
-(defn untrace-ns
-  "Untraces every traced var in the namespace `ns`"
-  [ns]
-  (doseq [[traced-fn _] (filter #(= (:ns (meta (first %))) ns) (all-traced))]
-    (untrace traced-fn)))
-
 (defn current-traced-var []
   (advice/current-advised))
 

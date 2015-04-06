@@ -5,7 +5,7 @@ REPL during development. It is heavily inspired by the excellent
 tracing facilities provided by
 [SBCL](http://www.sbcl.org/manual/#Function-Tracing).
 
-Available on Clojars: [`[enaeher/contrail "0.1.1"]`](http://clojars.org/enaeher/contrail)
+Available via Clojars: [`[enaeher/contrail "0.2.0"]`](http://clojars.org/enaeher/contrail)
 
 - [Why?](#why)
 - [API Documentation](#api-documentation)
@@ -399,6 +399,8 @@ contrail.core> (deep-reverse [1 2 3 [4 5 6 "foobar"]])
 
 - (Maybe) add the ability to serialize (and later re-apply) the current trace
   state
+
+- Implement `trace-ns` and `untrace-ns`
 
 ## License
 
