@@ -2865,12 +2865,13 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>enaeher/contrail -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://github.com/enaeher/contrail">enaeher/contrail</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>An interactive tracing facility for Clojure</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">thunknyc/richelieu</td><td class="dotted"><hr /></td><td class="dep-version">0.4.0</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#contrail.core">contrail.core</a></li><li><a href="#contrail.persistent-advice">contrail.persistent-advice</a></li><li><a href="#contrail.scratch">contrail.scratch</a></li><li><a href="#contrail.within">contrail.within</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.core" name="contrail.core"><h1 class="project-name">contrail.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>The main namespace for Contrail.</p>
+</script><title>enaeher/contrail -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://github.com/enaeher/contrail">enaeher/contrail</a></h1><h2 class="project-version">0.1.0</h2><br /><p>An interactive tracing facility for Clojure</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.6.0</td></tr><tr><td class="dep-name">thunknyc/richelieu</td><td class="dotted"><hr /></td><td class="dep-version">0.4.0</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#contrail.core">contrail.core</a></li><li><a href="#contrail.persistent-advice">contrail.persistent-advice</a></li><li><a href="#contrail.within">contrail.within</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.core" name="contrail.core"><h1 class="project-name">contrail.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>The main namespace for Contrail.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.core
   (:require [clojure.pprint :as pprint]
             [contrail.within :as within]
-            [contrail.persistent-advice :as advice]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, if bound, otherwise to
+            [contrail.persistent-advice :as advice]
+            [richelieu.core :as richelieu]))</pre></td></tr><tr><td class="docs"><p>Trace output will be sent to this writer, if bound, otherwise to
   <code>*out*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(def ^:dynamic *trace-out*
   nil)</pre></td></tr><tr><td class="docs"><p>Within a <code>report-before-fn</code> or <code>report-after-fn</code>, <code>*trace-level*</code>
@@ -2932,7 +2933,7 @@ net.brehaut.ClojureTools = (function (SH) {
     (pr-str thing)
     (str &quot;#&lt;&quot; (.getName (class thing)) &quot;&gt;&quot;)))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn report-arguments [&amp; args]
-  (pprint/cl-format nil &quot;(~s~@[ ~{~a~^ ~}~])&quot; (current-traced-var) (map get-string args)))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
+  (pprint/cl-format nil &quot;(~s~@[ ~{~a~^ ~}~])&quot; (current-traced-var) (seq (map get-string args))))</pre></td></tr><tr><td class="docs"><p>Prints a nicely-formatted list of the currently-traced function
   with its <code>args</code>, indented based on the current <code>*trace-level*</code></p>
 </td><td class="codes"><pre class="brush: clojure">(defn report-before
   [args report-before-fn]
@@ -2954,10 +2955,10 @@ net.brehaut.ClojureTools = (function (SH) {
   argument list (as a sequence), determines whether or not to run
   trace reporting for this invocation of the traced function.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- get-predicate
-  [when-fn arg-count within]
+  [when-fn arity within]
   (apply every-pred `(~#(apply when-fn %)
                       ~@(when within (list (fn [_] (within/within? @within))))
-                      ~@(when arg-count (list #(= arg-count (count %)))))))</pre></td></tr><tr><td class="docs"><p>Returns a function which unconditionally wraps <code>f</code> with trace
+                      ~@(when arity (list #(= arity (count %)))))))</pre></td></tr><tr><td class="docs"><p>Returns a function which unconditionally wraps <code>f</code> with trace
   reporting.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-trace-report-fn
   [report-before-fn report-after-fn]
@@ -2996,8 +2997,8 @@ net.brehaut.ClojureTools = (function (SH) {
   as specified by the remaining arguments to <code>get-advice-fn</code>, and
   which is suitable for passing to <code>richelieu/advise-var</code>.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn- get-advice-fn
-  [when-fn within limit report-before-fn report-after-fn arg-count]
-  (let [predicate (get-predicate when-fn arg-count within)
+  [when-fn within limit report-before-fn report-after-fn arity]
+  (let [predicate (get-predicate when-fn arity within)
         trace-report-fn (get-trace-report-fn report-before-fn report-after-fn)
         trace-report-fn (maybe-wrap-with-counter trace-report-fn limit)]
     (fn [f &amp; args]
@@ -3016,7 +3017,7 @@ net.brehaut.ClojureTools = (function (SH) {
   reporting will only occur when the traced function is called while
   the specified <code>within</code> function is on the stack.</p>
 
-<p>  If <code>arg-count</code> (an integer) is provided, the trace reporting will
+<p>  If <code>arity</code> (an integer) is provided, the trace reporting will
   only occur when the traced function is called with that number of
   arguments. (Note that this is not a true arity selector, since,
   there is no way to specify that only the variadic arity of a
@@ -3025,7 +3026,7 @@ net.brehaut.ClojureTools = (function (SH) {
 <p>  If <code>limit</code> (an integer) is provided, the trace reporting will only
   occur <code>limit</code> number of times, after which <code>untrace</code> will be called
   on the traced var. (If <code>limit</code> is specified in combination with
-  <code>when-fn</code>, <code>within</code>, or <code>arg-count</code>, only calls to the traced
+  <code>when-fn</code>, <code>within</code>, or <code>arity</code>, only calls to the traced
   function which actually meet those conditions and result in trace
   reporting will count toward the limit.)</p>
 
@@ -3038,8 +3039,8 @@ net.brehaut.ClojureTools = (function (SH) {
   function is called, with that function's return value as its
   argument, and should return a string to use as output. It defaults
   to <code>trace.core/report-retval</code> if not provided.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn trace
-  [f &amp; {:keys [when-fn within arg-count limit report-before-fn report-after-fn]
+</td><td class="codes"><pre class="brush: clojure">(richelieu/defadvice trace
+  [f &amp; {:keys [when-fn within arity limit report-before-fn report-after-fn]
         :or {when-fn (constantly true)
              report-before-fn report-arguments
              report-after-fn report-retval}}]
@@ -3053,7 +3054,7 @@ net.brehaut.ClojureTools = (function (SH) {
   (when (traced? f)
     (println f &quot;already traced, untracing first.&quot;)
     (untrace f))
-  (advice/advise f (get-advice-fn when-fn within limit report-before-fn report-after-fn arg-count))
+  (advice/advise f (get-advice-fn when-fn within limit report-before-fn report-after-fn arity))
   f)</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.persistent-advice" name="contrail.persistent-advice"><h1 class="project-name">contrail.persistent-advice</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.persistent-advice
   (:require [richelieu.core :as richelieu]))</pre></td></tr><tr><td class="docs">
@@ -3082,8 +3083,8 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn advise* [f advice-fn]
   (binding [*suppress-readvising?* true]
     (richelieu/advise-var f advice-fn))
-  (swap! advised-vars conj f))</pre></td></tr><tr><td class="docs"><p>Returns a function suitable for use by <code>add-watcher</code> which will
-  watch a var and re-advise it with <code>advice-fn</code> whenever it changes.</p>
+  (swap! advised-vars conj f))</pre></td></tr><tr><td class="docs"><p>Returns a function suitable for use by <code>add-watch</code> which will watch
+  a var and re-advise it with <code>advice-fn</code> whenever it changes.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn get-watcher
   [advice-fn]
   (fn [_ advised-var _ new-var-value]
@@ -3123,9 +3124,7 @@ net.brehaut.ClojureTools = (function (SH) {
                             wrap-with-untraced-guard
                             add-metadata)]
     (advise* f final-advice-fn)
-    (add-watch f &quot;contrail&quot; (get-watcher final-advice-fn))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.scratch" name="contrail.scratch"><h1 class="project-name">contrail.scratch</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(ns contrail.scratch)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn foo [])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.within" name="contrail.within"><h1 class="project-name">contrail.within</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+    (add-watch f &quot;contrail&quot; (get-watcher final-advice-fn))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#contrail.within" name="contrail.within"><h1 class="project-name">contrail.within</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns contrail.within)</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(defn- match? [potentially-enclosing-fn stack-trace-element]
   (= (.getName (class potentially-enclosing-fn))
@@ -3134,7 +3133,7 @@ net.brehaut.ClojureTools = (function (SH) {
 </td><td class="codes"><pre class="brush: clojure">(defn within?
   [potentially-enclosing-fn]
   (some (partial match? potentially-enclosing-fn)
-        (.. Thread currentThread getStackTrace)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_contrail.core">contrail.core</li><li class="floating-toc-li" id="floating-toc_contrail.persistent-advice">contrail.persistent-advice</li><li class="floating-toc-li" id="floating-toc_contrail.scratch">contrail.scratch</li><li class="floating-toc-li" id="floating-toc_contrail.within">contrail.within</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+        (.. Thread currentThread getStackTrace)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_contrail.core">contrail.core</li><li class="floating-toc-li" id="floating-toc_contrail.persistent-advice">contrail.persistent-advice</li><li class="floating-toc-li" id="floating-toc_contrail.within">contrail.within</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack
