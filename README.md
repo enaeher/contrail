@@ -5,7 +5,7 @@ REPL during development. It is heavily inspired by the excellent
 tracing facilities provided by
 [SBCL](http://www.sbcl.org/manual/#Function-Tracing).
 
-[![Clojars Project](http://clojars.org/enaeher/contrail/latest-version.svg)](http://clojars.org/enaeher/contrail)
+Available on Clojars: [`[enaeher/contrail "0.1.1"]`](http://clojars.org/enaeher/contrail)
 
 - [Why?](#why)
 - [API Documentation](#api-documentation)
