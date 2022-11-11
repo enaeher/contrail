@@ -1,3 +1,10 @@
+# ⚠️ This tool is deprecated by its author and is no longer maintained ⚠️ 
+
+There are better tools for observing Clojure code in operation these
+days. I am partial to Valentin Waeselynck's
+[scope-capture](https://github.com/vvvvalvalval/scope-capture). CIDER's
+debugger is nice too. You probably should not use this tool.
+
 # contrail [![Build Status](https://travis-ci.org/enaeher/contrail.svg?branch=master)](https://travis-ci.org/enaeher/contrail)
 
 Contrail is a library for interactively tracing your code in the
